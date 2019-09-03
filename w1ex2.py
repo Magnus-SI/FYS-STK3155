@@ -60,6 +60,9 @@ def Ridgescikit(lambd):
     plt.plot(xsort,fitridge,label="scikit Ridge, lambd=%.1e"%lambd)
     return fitridge
 
+def erroreval(fitdat):
+    pass
+
 if __name__=="__main__":
     lrfit=Linregown()
     for lambd in (0,0.1,0.01):#,0.001,0.0001):
@@ -68,4 +71,4 @@ if __name__=="__main__":
     plt.legend()
     plt.show()
 
-    pritn("SumDiff: %g"%(ro-rs))
+    print("SumDiff: %g"%(ro-rs))
