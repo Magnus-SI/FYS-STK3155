@@ -35,4 +35,11 @@ plt.show()
 
 "Make data for analysis:"
 
+N=100       #Amount of data points
 lr=LinearRegression(fit_intercept=False)
+x,y=np.random.uniform(0,1,size=(2,N))      #randomly generated points on the xy-grid
+z=FrankeFunction(x,y)
+sigma=0.02*np.max(z)
+mu=0
+noise=np.random.normal(mu,sigma,size=N)
+z+=noise
