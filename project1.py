@@ -9,7 +9,7 @@ import matplotlib.tri as mtri
 from numpy.polynomial.polynomial import polyvander2d
 
 class idk:
-    def __init__(self, seed=1):
+    def __init__(self, seed=2):
         np.random.seed(seed)
         self.data=False
         self.hasfit=False
@@ -43,6 +43,43 @@ class idk:
         #return np.linalg.inv(np.transpose(X)@X)@X@self.y
         XtXinv=np.linalg.inv(np.einsum('ij,ik',X,X))
         return np.einsum('ij,kj,k',XtXinv,X,self.y)
+
+    def OLS2(self,X):
+        lr=LinearRegression(fit_intercept=False)
+        lr.fit(X,self.y)
+        return lr.coef_
+
+    def Error(self,usenoisy=True):
+        if usenoisy:
+            y=self.y
+
+        else:
+            y=self.y_exact
+        MSE=1/self.N * np.sum((self.y_pred-y)**2)
+        return MSE
+
+    def ErrorAnalysis(self, poldeg=(5,5), noises=np.logspace(-2,2,5)):
+        noises=np.array(noises)
+        fig=plt.figure()
+        ax=fig.add_subplot(1,1,1)
+        MSEregs=np.zeros(len(noises))
+        MSEacts=np.zeros(len(noises))
+        for i, noise in enumerate(noises):
+            self.gendat(self.N, noisefraq=noise)
+            self.fit(self.OLS2,poldeg)
+            MSEregs[i]=self.Error(True)
+            MSEacts[i]=self.Error(False)
+        ax.plot(noises,MSEregs,label="Compared to noisy data")
+        ax.plot(noises,MSEacts,label="Compared to actual data")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.ylabel("MSE")
+        plt.xlabel("sigma/max(y)")
+        plt.title(poldeg)
+        plt.legend()
+        plt.show()
+        return MSEregs,MSEacts
+
 
     def plot3D(self,usenoisy=True,approx=False):
         if usenoisy:
@@ -79,6 +116,18 @@ class idk:
 
 if __name__=="__main__":
     I=idk()
-    I.gendat(300,noisefraq=0.001)
+    I.gendat(500,noisefraq=0.001)
     I.fit(I.OLS,(5,5))
     I.plot3D(True, True)
+    #print(I.Error())
+    I.N=2000
+    noises=np.logspace(-2,0,50)
+    reg5,act5=I.ErrorAnalysis(poldeg=(5,5),noises=noises)
+    reg8,act8=I.ErrorAnalysis(poldeg=(8,8),noises=noises)
+    fig=plt.figure()
+    plt.plot(noises,reg5, label="degree 5")
+    plt.plot(noises,reg8, label="degree 8")
+    plt.legend()
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.show()
