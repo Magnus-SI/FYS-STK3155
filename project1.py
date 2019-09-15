@@ -1,12 +1,28 @@
 import numpy as np
 from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.metrics import mean_squared_error as MSE
+from sklearn.model_selection import train_test_split as sklsplit
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.tri as mtri
 from numpy.polynomial.polynomial import polyvander2d
+import pandas as pd
+
+def OLS(X,y):
+    """
+    OLS using our given formulas, note that this as of now does not work with
+    polynomials of too high degree.
+    """
+    XtXinv=np.linalg.inv(np.einsum('ij,ik',X,X))
+    return np.einsum('ij,kj,k',XtXinv,X,y)
+
+def OLS2(X,y):
+    #OLS using scikit-learn
+    lr=LinearRegression(fit_intercept=False)
+    lr.fit(X,y)
+    return lr.coef_
 
 class idk:
     def __init__(self, seed=2):
@@ -23,7 +39,7 @@ class idk:
         term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
         return term1 + term2 + term3 + term4
 
-    def gendat(self,N,noisefraq=0.05, Function=FrankeFunction):
+    def gendat(self,N,noisefraq=0.05, Function=FrankeFunction, deg=(2,2)):
         """
         The data generation could, and probably should be changed to generate
         linspaced data as to allow for easier plotting, but also easier fitting.
@@ -32,6 +48,7 @@ class idk:
         N: Amount of data points generated
         noisefraq: fraction of data range in the y-direction as standard deviation
         """
+        df = pd.DataFrame()
         x1,x2 = np.random.uniform(0,1,size=(2,N))
         y_exact = self.FrankeFunction(x1,x2)
         sigma = (np.max(y_exact)-np.min(y_exact))*noisefraq
@@ -40,34 +57,63 @@ class idk:
         self.x1, self.x2, self.y_exact, self.y = x1, x2, y_exact, y
         self.N = N
         self.data=True      #checks that data is generated
+        df['x1'] = x1
+        df['x2'] = x2
+        df['y_exact'] = y_exact
+        df['y'] = y
+        self.df=df
 
-    def fit(self, method, deg=(2,2)):
+        self.X = polyvander2d(x1,x2,deg)
+
+    def kfoldsplit(self,k=5):
+        df=self.df.sample(frac=1.0)     #ensures random order of data
+        splitinds = len(df) * np.arange(1,k)/k  #indices to split at
+        splitinds = splitinds.astype(int)
+        dfsplit = np.split(df,splitinds)    #contains k dataframes, with the different sets of data
+        return dfsplit
+
+    def kfolderr(self,ks=np.arange(2,6), method=OLS):
+        """
+        Should later be merged with error functions and fit and similar
+        """
+        counter=0
+        MSE=0
+        for k in ks:
+            dfsplit = self.kfoldsplit(k)
+            for i in range(len(dfsplit)):
+                dftrain = pd.concat(dfsplit[:i]+dfsplit[i+1:])
+                self.fit(method,dftrain)
+                dftest = dfsplit[i]
+                MSE += self.testeval(dftest)
+                counter+=1
+        return MSE/counter      #average mean square error
+
+
+    def fit(self, method, df=None, deg=(2,2)):
         """
         method: method of fit. Would eventually be a choice between OLS, Ridge, Lasso
         deg: degree of polynomial to fit to
+        df: if None, then fit all data
         (lambda): necessary when Ridge and Lasso is implemented
         """
-        X=polyvander2d(self.x1,self.x2,deg)
-        beta=method(X)
-        y_pred=X@beta
+        if df is None:
+            df=self.df
+        y  = df['y']
+        inds = df.index
+        self.beta = method(self.X[inds], y)
+        #y_pred = self.predy(df)
         self.hasfit=True        #a fit has now been made
-        self.y_pred, self.beta = y_pred, beta
+        #self.y_pred = y_pred
 
-    def OLS(self,X):
-        """
-        OLS using our given formulas, note that this as of now does not work with
-        polynomials of too high degree.
-        """
-        XtXinv=np.linalg.inv(np.einsum('ij,ik',X,X))
-        return np.einsum('ij,kj,k',XtXinv,X,self.y)
+    def testeval(self,dftest):
+        inds = dftest.index
+        y_pred = self.X[inds]@self.beta
+        y = dftest['y']
+        N = len(y)
+        MSE = 1/N * np.sum((y_pred - y)**2)
+        return MSE
 
-    def OLS2(self,X):
-        #OLS using scikit-learn
-        lr=LinearRegression(fit_intercept=False)
-        lr.fit(X,self.y)
-        return lr.coef_
-
-    def Error(self,usenoisy=True):
+    def Error(self, test=False, usenoisy=True):
         """
         Input:
         usenoisy: whether to compare the error of the predicted y
@@ -81,6 +127,10 @@ class idk:
 
         else:
             y=self.y_exact
+
+        if test:
+            y=self.ytest
+
         MSE=1/self.N * np.sum((self.y_pred-y)**2)
         return MSE
 
@@ -155,6 +205,13 @@ class idk:
         pass
 
 if __name__=="__main__":
+
+    I = idk()
+    I.gendat(500, noisefraq=0.001)
+    ks=np.arange(2,6)
+    MSE=I.kfolderr(ks)
+
+    """
     I=idk()
     I.gendat(500,noisefraq=0.001)
     I.fit(I.OLS,(5,5))
@@ -173,3 +230,4 @@ if __name__=="__main__":
     plt.xscale("log")
     plt.yscale("log")
     plt.show()
+    """
