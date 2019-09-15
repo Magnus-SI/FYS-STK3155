@@ -29,6 +29,7 @@ class idk:
         np.random.seed(seed)
         self.data=False         #data is not yet generated
         self.hasfit=False       #a fit has not yet been made
+        self.compnoisy = True   #evaluate error compared to noisy data
         pass
 
     def FrankeFunction(self,x,y):
@@ -61,11 +62,15 @@ class idk:
         df['x2'] = x2
         df['y_exact'] = y_exact
         df['y'] = y
-        self.df=df
+        self.df=df              #dataframe of all data
 
-        self.X = polyvander2d(x1,x2,deg)
+        self.X = polyvander2d(x1,x2,deg)        #the polynomial coefficient matrix
 
     def kfoldsplit(self,k=5):
+        """
+        Splits data into k equally sized sets, 1 of which will be used for testing,
+        the rest for training
+        """
         df=self.df.sample(frac=1.0)     #ensures random order of data
         splitinds = len(df) * np.arange(1,k)/k  #indices to split at
         splitinds = splitinds.astype(int)
@@ -74,25 +79,25 @@ class idk:
 
     def kfolderr(self,ks=np.arange(2,6), method=OLS):
         """
-        Should later be merged with error functions and fit and similar
+        Evaluetes the kfolderr
         """
         counter=0
         MSE=0
         for k in ks:
-            dfsplit = self.kfoldsplit(k)
+            dfsplit = self.kfoldsplit(k)                        #split data
             for i in range(len(dfsplit)):
-                dftrain = pd.concat(dfsplit[:i]+dfsplit[i+1:])
-                self.fit(method,dftrain)
-                dftest = dfsplit[i]
-                MSE += self.testeval(dftest)
+                dftrain = pd.concat(dfsplit[:i]+dfsplit[i+1:])  #training data
+                self.fit(method,dftrain)        #fit with training data
+                dftest = dfsplit[i]             #test data
+                MSE += self.testeval(dftest)    #MSE on test data
                 counter+=1
         return MSE/counter      #average mean square error
 
 
-    def fit(self, method, df=None, deg=(2,2)):
+    def fit(self, method, df=None):
         """
+        fits given pandas dataframe, and sets the coefficients self.beta
         method: method of fit. Would eventually be a choice between OLS, Ridge, Lasso
-        deg: degree of polynomial to fit to
         df: if None, then fit all data
         (lambda): necessary when Ridge and Lasso is implemented
         """
@@ -106,15 +111,45 @@ class idk:
         #self.y_pred = y_pred
 
     def testeval(self,dftest):
+        """
+        Evaluates MSE for current beta fit, on a given set of test data
+        dftest: pandas dataframe containing test data
+        """
         inds = dftest.index
         y_pred = self.X[inds]@self.beta
-        y = dftest['y']
+        if self.compnoisy:
+            y = dftest['y']
+        else:
+            y = dftest['y_exact']
         N = len(y)
         MSE = 1/N * np.sum((y_pred - y)**2)
         return MSE
 
+    def degvnoiseerr(self,degs=np.arange(1,7),noises=np.logspace(-4,2,10)):
+        """
+        Compares MSEs of different degree polynomial fits, when exposed to different noises
+        """
+        fig=plt.figure()
+        ax=fig.add_subplot(1,1,1)
+        self.compnoisy=True         #whether to compare to actual data, or noisy data
+        for deg in degs:
+            MSEs=np.zeros(len(noises))
+            for i,noise in enumerate(noises):
+                self.gendat(self.N, noisefraq=noise, deg = (deg, deg))      #generate data
+                MSEs[i]=self.kfolderr(method=OLS2)                          #evaluate k-fold error
+            plt.plot(noises,MSEs, label="polydeg: %i"%deg)                  #plot error vs noise
+        plt.xlabel("sigma noise fraction")
+        plt.ylabel("MSE")
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.legend()
+        plt.show()
+
+
     def Error(self, test=False, usenoisy=True):
         """
+        WARNING: currently outdated, use at your own caution
+
         Input:
         usenoisy: whether to compare the error of the predicted y
         to the noisy y or the actual y
@@ -134,8 +169,10 @@ class idk:
         MSE=1/self.N * np.sum((self.y_pred-y)**2)
         return MSE
 
-    def ErrorAnalysis(self, poldeg=(5,5), noises=np.logspace(-2,2,5)):
+    def ErrorAnalysis(self, poldeg=(4,4), noises=np.logspace(-2,2,5)):
         """
+        WARNING: currently outdated, but should still work, use degvnoiseerr instead
+
         Some basic example of error analysis that compares the MSE error as
         it changes due to noise, and how this is different when comparing
         to noisy, or not noisy data.
@@ -147,10 +184,12 @@ class idk:
         MSEregs=np.zeros(len(noises))
         MSEacts=np.zeros(len(noises))
         for i, noise in enumerate(noises):
-            self.gendat(self.N, noisefraq=noise)
-            self.fit(self.OLS2,poldeg)
-            MSEregs[i]=self.Error(True)
-            MSEacts[i]=self.Error(False)
+            self.gendat(self.N, noisefraq=noise, deg=poldeg)
+            self.compnoisy=True
+            MSEregs[i] = self.kfolderr(method = OLS2)
+            self.compnoisy=False
+            MSEacts[i] = self.kfolderr(method = OLS2)
+
         ax.plot(noises,MSEregs,label="Compared to noisy data")
         ax.plot(noises,MSEacts,label="Compared to actual data")
         plt.xscale("log")
@@ -165,6 +204,8 @@ class idk:
 
     def plot3D(self,usenoisy=True,approx=False):
         """
+        WARNING: currently outdated, but should be updated to work at some point
+
         usenoisy: whether to plot the noisy data, or the actual data
         approx: whether to plot the approximated fit of the data
 
@@ -210,7 +251,9 @@ if __name__=="__main__":
     I.gendat(500, noisefraq=0.001)
     ks=np.arange(2,6)
     MSE=I.kfolderr(ks)
-
+    degs=np.arange(1,10)
+    noises=np.logspace(-4,2,20)
+    I.degvnoiseerr(degs,noises)
     """
     I=idk()
     I.gendat(500,noisefraq=0.001)
