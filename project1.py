@@ -168,7 +168,7 @@ class idk:
         dftest: pandas dataframe containing test data
         """
         if not self.hasfit:
-            print("Error : ")
+            print("Error : run fit before testeval")
             sys.exit(1)
         inds = dftest.index
         y_pred = self.X[inds]@self.beta
