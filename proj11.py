@@ -26,7 +26,7 @@ def FrankeFunction(x1,x2):
     return term1 + term2 + term3 + term4
 
 def OLS(X,y):
-    return np.linalg.inv(np.transpose(X)@X)@X@y
+    return np.linalg.inv(np.transpose(X)@X)@np.transpose(X)@y
 
 z=FrankeFunction(x,y)
 "Plot surface:"

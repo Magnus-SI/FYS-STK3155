@@ -9,6 +9,35 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import matplotlib.tri as mtri
 from numpy.polynomial.polynomial import polyvander2d
 import pandas as pd
+import sys
+
+
+
+class Ridge():
+    def __init__(self,lambda_):
+        """
+        Parameters:
+        lambda_ : Hyperparameter
+        """
+        self.lambda_ = lambda_
+
+    def __call__(self,X,y):
+        """
+        Preforms Ridge regression, returns an array of estimates for the beta-vector
+
+        Parameters:
+        X : Design matrix
+        y : Datapoints
+        """
+        lmb_matrix = np.identity(X.shape[1])*lambda_
+        return np.linalg.inv(np.transpose(X)@X+lmb_matrix)@np.transpose(X)@y
+
+class Lasso():
+    def __init__(self,lambda_):
+        self.lambda_ = lambda_
+
+    def __call__(self):
+        pass ## TODO: fill inn
 
 def OLS(X,y):
     """
@@ -18,11 +47,34 @@ def OLS(X,y):
     XtXinv=np.linalg.inv(np.einsum('ij,ik',X,X))
     return np.einsum('ij,kj,k',XtXinv,X,y)
 
+def Ridge(X,y,lambda_):
+    """
+    Preforms Ridge regression, returns an array of estimates for the beta-vector
+
+    Parametes:
+    X : Design matrix
+    y : Datapoints
+    lambda_ : Hyperparameter
+    """
+    lmb_matrix = np.identity(X.shape[1])*lambda_
+    return np.linalg.inv(np.transpose(X)@X+lmb_matrix)@np.transpose(X)@y
+
 def OLS2(X,y):
     #OLS using scikit-learn
     lr=LinearRegression(fit_intercept=False)
     lr.fit(X,y)
     return lr.coef_
+
+def R2(y,y_model):
+    """
+    Returns the R2 score for a dataset y and a set of predicted y values, y_model
+
+    Parametes:
+    y : datapoints
+    y_model : points estimated by model
+    """
+    score = 1 - (y - y_model)**2 / (y - np.mean(y_model))
+    return score
 
 class idk:
     def __init__(self, seed=2):
@@ -79,7 +131,7 @@ class idk:
 
     def kfolderr(self,ks=np.arange(2,6), method=OLS):
         """
-        Evaluetes the kfolderr
+        Evaluetes the kfold error
         """
         counter=0
         MSE=0
@@ -115,6 +167,9 @@ class idk:
         Evaluates MSE for current beta fit, on a given set of test data
         dftest: pandas dataframe containing test data
         """
+        if not self.hasfit:
+            print("Error : ")
+            sys.exit(1)
         inds = dftest.index
         y_pred = self.X[inds]@self.beta
         if self.compnoisy:
