@@ -11,7 +11,7 @@ import matplotlib.tri as mtri
 from numpy.polynomial.polynomial import polyvander2d
 import pandas as pd
 import sys
-from Ridge import Ridge as Ridge2
+from Ridge import Ridge
 
 
 def OLS(X,y):
@@ -82,7 +82,7 @@ class idk:
         df['x1'] = x1
         df['x2'] = x2
         df['y_exact'] = y_exact
-        
+
         self.df = df
         self.changenoise(noisefraq = noisefraq)
         self.changepolydeg(polydeg = deg)
@@ -158,7 +158,7 @@ class idk:
         MSE = 1/N * np.sum((y_pred - y)**2)
         return MSE
 
-    def MSEvlambda(self, lambds, method=Ridge(0,True), polydeg=(5,5), noises = np.logspace(-4,-2,2), avgnum=3):
+    def MSEvlambda(self, lambds, method=Ridge(0), polydeg=(5,5), noises = np.logspace(-4,-2,2), avgnum=3):
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
         self.compnoisy = True
