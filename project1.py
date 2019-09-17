@@ -11,46 +11,15 @@ import matplotlib.tri as mtri
 from numpy.polynomial.polynomial import polyvander2d
 import pandas as pd
 import sys
+from Ridge import Ridge as Ridge2
 
-
-
-class Ridge():
-    def __init__(self,lambda_, skl=False):
-        """
-        Parameters:
-        lambda_ : Hyperparameter
-        """
-        self.lambda_ = lambda_
-        self.skl = skl
-
-    def __call__(self,X,y):
-        """
-        Preforms Ridge regression, returns an array of estimates for the beta-vector
-
-        Parameters:
-        X : Design matrix
-        y : Datapoints
-        """
-        if self.skl:
-            lr = skl.Ridge(alpha = self.lambda_, fit_intercept=False)
-            lr.fit(X,y)
-            return lr.coef_
-        lmb_matrix = np.identity(X.shape[1])*self.lambda_
-        return np.linalg.inv(np.transpose(X)@X+lmb_matrix)@np.transpose(X)@y
-
-class Lasso():
-    def __init__(self,lambda_):
-        self.lambda_ = lambda_
-
-    def __call__(self):
-        pass ## TODO: fill inn
 
 def OLS(X,y):
     """
     OLS using our given formulas, note that this as of now does not work with
     polynomials of too high degree.
     """
-    XtXinv=np.linalg.inv(np.einsum('ij,ik',X,X))
+    XtXinv = np.linalg.inv(np.einsum('ij,ik',X,X))
     return np.einsum('ij,kj,k',XtXinv,X,y)
 
 def OLS2(X,y):
@@ -70,11 +39,22 @@ def R2(y,y_model):
     score = 1 - (y - y_model)**2 / (y - np.mean(y_model))
     return score
 
+def var_beta(beta,y,y_model):
+    """
+    Retruns an array with the standard deviation of each beta parameter
+
+    Parametes:
+    beta : estimated array of betas
+    y : actual datapoints
+    y_model : modeled y values
+    """
+    sigma_sqr = np.sum()
+
 class idk:
     def __init__(self, seed=2):
         np.random.seed(seed)
-        self.data=False         #data is not yet generated
-        self.hasfit=False       #a fit has not yet been made
+        self.data = False         #data is not yet generated
+        self.hasfit = False       #a fit has not yet been made
         self.compnoisy = True   #evaluate error compared to noisy data
         pass
 
@@ -102,6 +82,7 @@ class idk:
         df['x1'] = x1
         df['x2'] = x2
         df['y_exact'] = y_exact
+        
         self.df = df
         self.changenoise(noisefraq = noisefraq)
         self.changepolydeg(polydeg = deg)
@@ -120,7 +101,7 @@ class idk:
         Splits data into k equally sized sets, 1 of which will be used for testing,
         the rest for training
         """
-        df=self.df.sample(frac=1.0)     #ensures random order of data
+        df = self.df.sample(frac=1.0)     #ensures random order of data
         splitinds = len(df) * np.arange(1,k)/k  #indices to split at
         splitinds = splitinds.astype(int)
         dfsplit = np.split(df,splitinds)    #contains k dataframes, with the different sets of data
@@ -130,8 +111,8 @@ class idk:
         """
         Evaluetes the kfold error
         """
-        counter=0
-        MSE=0
+        counter = 0
+        MSE = 0
         for k in ks:
             dfsplit = self.kfoldsplit(k)                        #split data
             for i in range(len(dfsplit)):
@@ -151,12 +132,12 @@ class idk:
         (lambda): necessary when Ridge and Lasso is implemented
         """
         if df is None:
-            df=self.df
+            df = self.df
         y  = df['y']
         inds = df.index
         self.beta = method(self.X[inds], y)
         #y_pred = self.predy(df)
-        self.hasfit=True        #a fit has now been made
+        self.hasfit = True        #a fit has now been made
         #self.y_pred = y_pred
 
     def testeval(self,dftest):
@@ -165,7 +146,7 @@ class idk:
         dftest: pandas dataframe containing test data
         """
         if not self.hasfit:
-            print("Error : ")
+            print("Error : run fit before testeval")
             sys.exit(1)
         inds = dftest.index
         y_pred = self.X[inds]@self.beta
@@ -206,7 +187,7 @@ class idk:
         ax=fig.add_subplot(1,1,1)
         self.compnoisy=True         #whether to compare to actual data, or noisy data
         for deg in degs:
-            MSEs=np.zeros(len(noises))
+            MSEs = np.zeros(len(noises))
             for i,noise in enumerate(noises):
                 self.gendat(self.N, noisefraq=noise, deg = (deg, deg))      #generate data
                 MSEs[i]=self.kfolderr(method=OLS2)                          #evaluate k-fold error
@@ -231,13 +212,13 @@ class idk:
         """
 
         if usenoisy:
-            y=self.y
+            y = self.y
 
         else:
-            y=self.y_exact
+            y = self.y_exact
 
         if test:
-            y=self.ytest
+            y = self.ytest
 
         MSE=1/self.N * np.sum((self.y_pred-y)**2)
         return MSE
@@ -251,11 +232,11 @@ class idk:
         to noisy, or not noisy data.
         """
 
-        noises=np.array(noises)
-        fig=plt.figure()
-        ax=fig.add_subplot(1,1,1)
-        MSEregs=np.zeros(len(noises))
-        MSEacts=np.zeros(len(noises))
+        noises = np.array(noises)
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        MSEregs = np.zeros(len(noises))
+        MSEacts = np.zeros(len(noises))
         for i, noise in enumerate(noises):
             self.gendat(self.N, noisefraq=noise, deg=poldeg)
             self.compnoisy=True
@@ -263,8 +244,8 @@ class idk:
             self.compnoisy=False
             MSEacts[i] = self.kfolderr(method = OLS2)
 
-        ax.plot(noises,MSEregs,label="Compared to noisy data")
-        ax.plot(noises,MSEacts,label="Compared to actual data")
+        ax.plot(noises,MSEregs,label = "Compared to noisy data")
+        ax.plot(noises,MSEacts,label = "Compared to actual data")
         plt.xscale("log")
         plt.yscale("log")
         plt.ylabel("MSE")
@@ -287,15 +268,15 @@ class idk:
         """
 
         if usenoisy:
-            y=self.y
+            y = self.y
         else:
-            y=self.y_exact
+            y = self.y_exact
         if not self.data:
             print("Generate data first")
             return
-        triang=mtri.Triangulation(self.x1,self.x2)          #nevessary for unevenly spaced data
-        fig=plt.figure()
-        ax=fig.add_subplot(1,1,1, projection='3d')
+        triang = mtri.Triangulation(self.x1,self.x2)          #nevessary for unevenly spaced data
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1, projection='3d')
         #ax.plot_trisurf(triang,self.y,cmap='jet')
         ax.scatter(self.x1, self.x2, y, marker='.', s=10, c='green', alpha=0.5)
         if approx:
@@ -322,24 +303,25 @@ if __name__=="__main__":
 
     I = idk()
     I.gendat(500, noisefraq=0.001)
-    ks=np.arange(2,6)
-    MSE=I.kfolderr(ks)
-    #degs=np.arange(1,10)
-    #noises=np.logspace(-4,2,20)
+
+    ks = np.arange(2,6)
+    MSE = I.kfolderr(ks)
+    #degs = np.arange(1,10)
+    #noises = np.logspace(-4,2,20)
     #I.degvnoiseerr(degs,noises)
     lambds = np.logspace(-8,-1,8)
     I.MSEvlambda(lambds)
     """
-    I=idk()
+    I = idk()
     I.gendat(500,noisefraq=0.001)
     I.fit(I.OLS,(5,5))
     I.plot3D(True, True)
     #print(I.Error())
-    I.N=2000
-    noises=np.logspace(-2,0,50)
-    reg5,act5=I.ErrorAnalysis(poldeg=(5,5),noises=noises)
-    reg8,act8=I.ErrorAnalysis(poldeg=(8,8),noises=noises)
-    fig=plt.figure()
+    I.N = 2000
+    noises = np.logspace(-2,0,50)
+    reg5,act5 = I.ErrorAnalysis(poldeg=(5,5),noises=noises)
+    reg8,act8 = I.ErrorAnalysis(poldeg=(8,8),noises=noises)
+    fig = plt.figure()
     plt.plot(noises,reg5, label="deg 5 vs. noise")
     plt.plot(noises,reg8, label="deg 8 vs. noise")
     plt.plot(noises,act5, label="deg 5 vs. actual")
