@@ -66,7 +66,7 @@ class idk:
         term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
         return term1 + term2 + term3 + term4
 
-    def gendat(self,N,noisefraq=0.05, Function=FrankeFunction, deg=(2,2)):
+    def gendat(self,N,noisefraq=0.05, Function=FrankeFunction, deg=(2,2), randpoints = True):
         """
         The data generation could, and probably should be changed to generate
         linspaced data as to allow for easier plotting, but also easier fitting.
@@ -76,9 +76,21 @@ class idk:
         noisefraq: fraction of data range in the y-direction as standard deviation
         """
         df = pd.DataFrame()
-        x1,x2 = np.random.uniform(0,1,size=(2,N))
         self.N = N
-        y_exact = self.FrankeFunction(x1,x2)
+        if randpoints:
+            x1,x2 = np.random.uniform(0,1,size=(2,N))
+            y_exact = self.FrankeFunction(x1,x2)
+        else:
+            n = int(np.sqrt(N))
+            x1 = np.linspace(0, 1, n)
+            x2 = np.linspace(0, 1, n)
+            x1, x2 = np.meshgrid(x1,x2)
+            x1 = x1.flatten()
+            x2 = x2.flatten()
+            y_exact = self.FrankeFunction(x1,x2)
+            self.N = n**2
+
+
         df['x1'] = x1
         df['x2'] = x2
         df['y_exact'] = y_exact
@@ -161,7 +173,7 @@ class idk:
     def MSEvlambda(self, lambds, method=Ridge(0), polydeg=(5,5), noises = np.logspace(-4,-2,2), avgnum=3):
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
-        self.compnoisy = True
+        self.compnoisy = False
         MSEs = np.zeros(len(lambds))
         self.gendat(self.N, noisefraq = noises[0], deg = polydeg)
         for noise in noises:
@@ -185,7 +197,7 @@ class idk:
         """
         fig=plt.figure()
         ax=fig.add_subplot(1,1,1)
-        self.compnoisy=True         #whether to compare to actual data, or noisy data
+        self.compnoisy=True        #whether to compare to actual data, or noisy data
         for deg in degs:
             MSEs = np.zeros(len(noises))
             for i,noise in enumerate(noises):
@@ -310,7 +322,7 @@ if __name__=="__main__":
     #noises = np.logspace(-4,2,20)
     #I.degvnoiseerr(degs,noises)
     lambds = np.logspace(-8,-1,8)
-    I.MSEvlambda(lambds)
+    #I.MSEvlambda(lambds)
     """
     I = idk()
     I.gendat(500,noisefraq=0.001)
