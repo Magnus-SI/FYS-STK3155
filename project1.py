@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.linear_model import LinearRegression, Ridge
+import sklearn.linear_model as skl
 from sklearn.metrics import mean_squared_error as MSE
 from sklearn.model_selection import train_test_split as sklsplit
 import matplotlib.pyplot as plt
@@ -12,6 +13,7 @@ import pandas as pd
 import sys
 from Ridge import Ridge as Ridge2
 
+
 def OLS(X,y):
     """
     OLS using our given formulas, note that this as of now does not work with
@@ -19,18 +21,6 @@ def OLS(X,y):
     """
     XtXinv = np.linalg.inv(np.einsum('ij,ik',X,X))
     return np.einsum('ij,kj,k',XtXinv,X,y)
-
-def Ridge(X,y,lambda_):
-    """
-    Preforms Ridge regression, returns an array of estimates for the beta-vector
-
-    Parametes:
-    X : Design matrix
-    y : Datapoints
-    lambda_ : Hyperparameter
-    """
-    lmb_matrix = np.identity(X.shape[1])*lambda_
-    return np.linalg.inv(np.transpose(X)@X+lmb_matrix)@np.transpose(X)@y
 
 def OLS2(X,y):
     #OLS using scikit-learn
@@ -87,20 +77,24 @@ class idk:
         """
         df = pd.DataFrame()
         x1,x2 = np.random.uniform(0,1,size=(2,N))
-        y_exact = self.FrankeFunction(x1,x2)
-        sigma = (np.max(y_exact)-np.min(y_exact))*noisefraq
-        mu = 0
-        y = y_exact + np.random.normal(mu, sigma, size=N)
-        self.x1, self.x2, self.y_exact, self.y = x1, x2, y_exact, y
         self.N = N
-        self.data=True      #checks that data is generated
+        y_exact = self.FrankeFunction(x1,x2)
         df['x1'] = x1
         df['x2'] = x2
         df['y_exact'] = y_exact
-        df['y'] = y
-        self.df = df              #dataframe of all data
+        
+        self.df = df
+        self.changenoise(noisefraq = noisefraq)
+        self.changepolydeg(polydeg = deg)
 
-        self.X = polyvander2d(x1,x2,deg)        #the polynomial coefficient matrix
+    def changenoise(self, noisefraq):
+        y_exact = self.df['y_exact']
+        sigma = (np.max(y_exact)-np.min(y_exact))*noisefraq
+        mu = 0
+        self.df['y'] = y_exact + np.random.normal(mu, sigma, size=self.N)
+
+    def changepolydeg(self, polydeg=(5,5)):
+        self.X = polyvander2d(self.df['x1'], self.df['x2'], polydeg)
 
     def kfoldsplit(self,k=5):
         """
@@ -113,7 +107,7 @@ class idk:
         dfsplit = np.split(df,splitinds)    #contains k dataframes, with the different sets of data
         return dfsplit
 
-    def kfolderr(self,ks=np.arange(2,6), method=OLS):
+    def kfolderr(self,ks=np.arange(2,10), method=OLS):
         """
         Evaluetes the kfold error
         """
@@ -163,6 +157,27 @@ class idk:
         N = len(y)
         MSE = 1/N * np.sum((y_pred - y)**2)
         return MSE
+
+    def MSEvlambda(self, lambds, method=Ridge(0,True), polydeg=(5,5), noises = np.logspace(-4,-2,2), avgnum=3):
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        self.compnoisy = True
+        MSEs = np.zeros(len(lambds))
+        self.gendat(self.N, noisefraq = noises[0], deg = polydeg)
+        for noise in noises:
+            for i,lambd in enumerate(lambds):
+                method.lambda_ = lambd
+                for j in range(avgnum):
+                    self.changenoise(noise)
+                    MSEs[i]+= self.kfolderr(method=method)
+                MSEs[i] *= 1/avgnum
+            plt.plot(lambds,MSEs, label="noise: %g" %noise)
+            plt.xlabel("lambda")
+            plt.ylabel("MSE")
+            plt.xscale("log")
+            plt.yscale("log")
+        plt.legend()
+        plt.show()
 
     def degvnoiseerr(self,degs=np.arange(1,7),noises=np.logspace(-4,2,10)):
         """
@@ -288,22 +303,25 @@ if __name__=="__main__":
 
     I = idk()
     I.gendat(500, noisefraq=0.001)
+
     ks = np.arange(2,6)
     MSE = I.kfolderr(ks)
-    degs = np.arange(1,10)
-    noises = np.logspace(-4,2,20)
-    I.degvnoiseerr(degs,noises)
+    #degs = np.arange(1,10)
+    #noises = np.logspace(-4,2,20)
+    #I.degvnoiseerr(degs,noises)
+    lambds = np.logspace(-8,-1,8)
+    I.MSEvlambda(lambds)
     """
-    I=idk()
+    I = idk()
     I.gendat(500,noisefraq=0.001)
     I.fit(I.OLS,(5,5))
     I.plot3D(True, True)
     #print(I.Error())
-    I.N=2000
-    noises=np.logspace(-2,0,50)
-    reg5,act5=I.ErrorAnalysis(poldeg=(5,5),noises=noises)
-    reg8,act8=I.ErrorAnalysis(poldeg=(8,8),noises=noises)
-    fig=plt.figure()
+    I.N = 2000
+    noises = np.logspace(-2,0,50)
+    reg5,act5 = I.ErrorAnalysis(poldeg=(5,5),noises=noises)
+    reg8,act8 = I.ErrorAnalysis(poldeg=(8,8),noises=noises)
+    fig = plt.figure()
     plt.plot(noises,reg5, label="deg 5 vs. noise")
     plt.plot(noises,reg8, label="deg 8 vs. noise")
     plt.plot(noises,act5, label="deg 5 vs. actual")
