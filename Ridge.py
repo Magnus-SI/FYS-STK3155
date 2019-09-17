@@ -17,7 +17,7 @@ class Ridge():
         X : Design matrix
         y : Datapoints
         """
-        lmb_matrix = np.identity(X.shape[1])*lambda_
+        lmb_matrix = np.identity(X.shape[1])*self.lambda_
         return np.linalg.inv(np.transpose(X)@X+lmb_matrix)@np.transpose(X)@y
 
 
