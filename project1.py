@@ -76,10 +76,10 @@ class idk:
         The data generation could, and probably should be changed to generate
         linspaced data as to allow for easier plotting, but also easier fitting.
         However, the code should be general enough that it would work anyways.
-
         N: Amount of data points generated
         noisefraq: fraction of data range in the y-direction as standard deviation
         """
+        self.polydeg = deg
         df = pd.DataFrame()
         self.N = N
         if randpoints:
@@ -111,6 +111,7 @@ class idk:
         self.df['y'] = y_exact + np.random.normal(mu, sigma, size=self.N)
 
     def changepolydeg(self, polydeg=(5,5)):
+        self.polydeg = polydeg
         self.X = polyvander2d(self.df['x1'], self.df['x2'], polydeg)
 
     def kfoldsplit(self,k=5):
@@ -238,6 +239,31 @@ class idk:
         MSE=1/self.N * np.sum((self.y_pred-y)**2)
         return MSE
 
+    def Bootstrap(self,K,model):
+        """
+        Calculates the confidence interval of each beta parameter through the
+        bootstrap method
+
+        Parameters :
+        K : Numbers of iterations of bootstrap
+        model : A fitting function, must take arguments (X,y) can be call function of a class
+
+        Returns :
+        sigma_beta : array containing the standard deviation of the beta values
+        """
+        betas = np.zeros(shape = (K,len(self.X[0,:])))
+        # Run fit method K times
+        for i in range(K):
+            self.fit(model,df = self.df.sample(frac = 1.0, replace = True))
+            betas[i] += self.beta
+        # Find average
+        avg_beta = np.sum(betas,axis = 0)/K
+        # Calculate variance
+        sigma_beta_sqr = np.sum((betas-avg_beta)**2,axis = 0)/K
+        # Take square root to find the standard deviation
+        sigma_beta = np.sqrt(sigma_beta_sqr)
+        return sigma_beta
+
     def ErrorAnalysis(self, poldeg=(4,4), noises=np.logspace(-2,2,5)):
         """
         WARNING: currently outdated, but should still work, use degvnoiseerr instead
@@ -324,12 +350,19 @@ if __name__=="__main__":
     #degs = np.arange(1,10)
     #noises = np.logspace(-4,2,20)
     #I.degvnoiseerr(degs,noises)
+
+    lambds = np.logspace(-8,-1,8)
+    I.MSEvlambda(lambds)
+    print(I.Bootstrap(1000,OLS))
+    print(I.beta)
+
     lambds = np.logspace(-8,-1,50)
     #I.MSEvlambda(lambds)
     #I = idk()
     #I.gendat(21**2, noisefraq = 1e-3, Function = functest, deg = (2,2), randpoints = False)
     #I.compnoisy=False
     #I.MSEvlambda(lambds, method = Ridge(0),  polydeg = (2,2), noises = np.logspace(-4,-1, 4), avgnum = 15)
+
     """
     I = idk()
     I.gendat(500,noisefraq=0.001)
