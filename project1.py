@@ -50,6 +50,17 @@ def var_beta(beta,y,y_model):
     """
     sigma_sqr = np.sum()
 
+def FrankeFunction(x,y):
+    #The franke function as given
+    term1 = 0.75*np.exp(-(0.25*(9*x-2)**2)-0.25*((9*y-2)**2))
+    term2 = 0.75*np.exp(-((9*x+1)**2)/49.0 - 0.1*(9*y+1))
+    term3 = 0.5*np.exp(-(9*x-7)**2/4.0 - 0.25*((9*y-3)**2))
+    term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
+    return term1 + term2 + term3 + term4
+
+def functest(x,y):
+    return x**3-x*y**2
+
 class idk:
     def __init__(self, seed=2):
         np.random.seed(seed)
@@ -58,13 +69,7 @@ class idk:
         self.compnoisy = True   #evaluate error compared to noisy data
         pass
 
-    def FrankeFunction(self,x,y):
-        #The franke function as given
-        term1 = 0.75*np.exp(-(0.25*(9*x-2)**2)-0.25*((9*y-2)**2))
-        term2 = 0.75*np.exp(-((9*x+1)**2)/49.0 - 0.1*(9*y+1))
-        term3 = 0.5*np.exp(-(9*x-7)**2/4.0 - 0.25*((9*y-3)**2))
-        term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
-        return term1 + term2 + term3 + term4
+
 
     def gendat(self,N,noisefraq=0.05, Function=FrankeFunction, deg=(2,2), randpoints = True):
         """
@@ -79,7 +84,7 @@ class idk:
         self.N = N
         if randpoints:
             x1,x2 = np.random.uniform(0,1,size=(2,N))
-            y_exact = self.FrankeFunction(x1,x2)
+            y_exact = Function(x1,x2)
         else:
             n = int(np.sqrt(N))
             x1 = np.linspace(0, 1, n)
@@ -87,7 +92,7 @@ class idk:
             x1, x2 = np.meshgrid(x1,x2)
             x1 = x1.flatten()
             x2 = x2.flatten()
-            y_exact = self.FrankeFunction(x1,x2)
+            y_exact = Function(x1,x2)
             self.N = n**2
 
 
@@ -119,7 +124,7 @@ class idk:
         dfsplit = np.split(df,splitinds)    #contains k dataframes, with the different sets of data
         return dfsplit
 
-    def kfolderr(self,ks=np.arange(2,10), method=OLS):
+    def kfolderr(self,ks=np.arange(2,6), method=OLS):
         """
         Evaluetes the kfold error
         """
@@ -173,7 +178,6 @@ class idk:
     def MSEvlambda(self, lambds, method=Ridge(0), polydeg=(5,5), noises = np.logspace(-4,-2,2), avgnum=3):
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1)
-        self.compnoisy = False
         MSEs = np.zeros(len(lambds))
         self.gendat(self.N, noisefraq = noises[0], deg = polydeg)
         for noise in noises:
@@ -197,7 +201,6 @@ class idk:
         """
         fig=plt.figure()
         ax=fig.add_subplot(1,1,1)
-        self.compnoisy=True        #whether to compare to actual data, or noisy data
         for deg in degs:
             MSEs = np.zeros(len(noises))
             for i,noise in enumerate(noises):
@@ -321,8 +324,12 @@ if __name__=="__main__":
     #degs = np.arange(1,10)
     #noises = np.logspace(-4,2,20)
     #I.degvnoiseerr(degs,noises)
-    lambds = np.logspace(-8,-1,8)
+    lambds = np.logspace(-8,-1,50)
     #I.MSEvlambda(lambds)
+    #I = idk()
+    #I.gendat(21**2, noisefraq = 1e-3, Function = functest, deg = (2,2), randpoints = False)
+    #I.compnoisy=False
+    #I.MSEvlambda(lambds, method = Ridge(0),  polydeg = (2,2), noises = np.logspace(-4,-1, 4), avgnum = 15)
     """
     I = idk()
     I.gendat(500,noisefraq=0.001)
