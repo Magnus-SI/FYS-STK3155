@@ -78,6 +78,12 @@ class idk:
         However, the code should be general enough that it would work anyways.
         N: Amount of data points generated
         noisefraq: fraction of data range in the y-direction as standard deviation
+        deg: degree of polynomial to generate initial design matrix
+        randpoints: whether to generate randomly spaced, or evenly spaced data
+
+        Returns:
+        Changes state of the class to include a dataframe of data with added noise,
+        as well as the design matrix
         """
         self.polydeg = deg
         df = pd.DataFrame()
@@ -105,12 +111,14 @@ class idk:
         self.changepolydeg(polydeg = deg)
 
     def changenoise(self, noisefraq):
+        "Changes the noise of the current data"
         y_exact = self.df['y_exact']
         sigma = (np.max(y_exact)-np.min(y_exact))*noisefraq
         mu = 0
         self.df['y'] = y_exact + np.random.normal(mu, sigma, size=self.N)
 
     def changepolydeg(self, polydeg=(5,5)):
+        "Changes the polynomial degree of the design matrix"
         self.polydeg = polydeg
         self.X = polyvander2d(self.df['x1'], self.df['x2'], polydeg)
 
