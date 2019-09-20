@@ -114,6 +114,7 @@ class idk:
         "Changes the noise of the current data"
         y_exact = self.df['y_exact']
         sigma = (np.max(y_exact)-np.min(y_exact))*noisefraq
+        self.sigma = sigma
         mu = 0
         self.df['y'] = y_exact + np.random.normal(mu, sigma, size=self.N)
 
@@ -164,7 +165,6 @@ class idk:
         self.beta = method(self.X[inds], y)
         #y_pred = self.predy(df)
         self.hasfit = True        #a fit has now been made
-        #self.y_pred = y_pred
 
     def testeval(self,dftest):
         """
@@ -223,29 +223,45 @@ class idk:
         plt.legend()
         plt.show()
 
+    def biasvarawe(self):
+        polydegs = np.array([3,4,5,6])
+        betavars = np.zeros(len(polydegs))
+        self.gendat(self.N,noisefraq=1e-5, deg = (5,5))
+        for i,poly in enumerate(polydegs):
+            self.changepolydeg((poly, poly))
+            betavars[i] = np.sum(self.Bootstrap(1000,OLS))
 
-    def Error(self, test=False, usenoisy=True):
-        """
-        WARNING: currently outdated, use at your own caution
+        plt.plot(polydegs,betavars)
+        plt.yscale("log")
+        plt.show()
 
-        Input:
-        usenoisy: whether to compare the error of the predicted y
-        to the noisy y or the actual y
+    def biasvar(self,K, model, polydegs):
+        split = int(0.8*self.N)
+        MSEs = np.zeros(len(polydegs))
+        biass = np.zeros(len(polydegs))
+        variances = np.zeros(len(polydegs))
+        for j,polydeg in enumerate(polydegs):
+            self.changepolydeg((polydeg, polydeg))
+            dftrain, dftest = np.split(self.df, [split])
+            testinds = dftest.index
+            y = dftest['y']
 
-        Returns the MSE, and later the R2 score
-        """
+            ypreds = np.zeros((len(dftest), K))
+            for i in range(K):
+                df = dftrain.sample(frac=1.0, replace=True)
+                self.fit(model, df)
+                ypreds[:,i] = self.X[testinds]@self.beta
+            MSEs[j] = self.testeval(dftest)
+            biass[j] = np.mean((y-np.mean(ypreds,axis=1))**2)
+            variances[j] = np.mean(np.var(ypreds, axis=1))
+            #print(MSE, bias, variance, self.sigma**2)
+        plt.plot(polydegs, MSEs, label="MSE")
+        plt.plot(polydegs, biass, label="bias")
+        plt.plot(polydegs, variances, label="variance")
+        plt.legend()
+        plt.yscale("log")
+        plt.show()
 
-        if usenoisy:
-            y = self.y
-
-        else:
-            y = self.y_exact
-
-        if test:
-            y = self.ytest
-
-        MSE=1/self.N * np.sum((self.y_pred-y)**2)
-        return MSE
 
     def Bootstrap(self,K,model):
         """
@@ -263,7 +279,7 @@ class idk:
         # Run fit method K times
         for i in range(K):
             self.fit(model,df = self.df.sample(frac = 1.0, replace = True))
-            betas[i] += self.beta
+            betas[i] = self.beta
         # Find average
         avg_beta = np.sum(betas,axis = 0)/K
         # Calculate variance
@@ -317,20 +333,21 @@ class idk:
         """
 
         if usenoisy:
-            y = self.y
+            y = self.df['y']
         else:
-            y = self.y_exact
+            y = self.df['y_exact']
         if not self.data:
             print("Generate data first")
             return
-        triang = mtri.Triangulation(self.x1,self.x2)          #nevessary for unevenly spaced data
+        x1 = self.df['x1']; x2 = self.df['x2']
+        triang = mtri.Triangulation(x1,x2)          #nevessary for unevenly spaced data
         fig = plt.figure()
         ax = fig.add_subplot(1,1,1, projection='3d')
         #ax.plot_trisurf(triang,self.y,cmap='jet')
-        ax.scatter(self.x1, self.x2, y, marker='.', s=10, c='green', alpha=0.5)
+        ax.scatter(x1, x2, y, marker='.', s=10, c='green', alpha=0.5)
         if approx:
             if self.hasfit:
-                ax.scatter(self.x1, self.x2, self.y_pred, marker='.', s=10, c='black', alpha=0.5)
+                ax.scatter(x1, self.x2, self.y_pred, marker='.', s=10, c='black', alpha=0.5)
             else:
                 print("Fit data first")
 
@@ -360,7 +377,7 @@ if __name__=="__main__":
     #I.degvnoiseerr(degs,noises)
 
     lambds = np.logspace(-8,-1,8)
-    I.MSEvlambda(lambds)
+    #I.MSEvlambda(lambds)
     print(I.Bootstrap(1000,OLS))
     print(I.beta)
 
