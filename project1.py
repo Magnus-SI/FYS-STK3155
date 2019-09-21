@@ -244,14 +244,15 @@ class idk:
             self.changepolydeg((polydeg, polydeg))
             dftrain, dftest = np.split(self.df, [split])
             testinds = dftest.index
-            y = dftest['y']
+            y = dftest['y'].values
 
             ypreds = np.zeros((len(dftest), K))
             for i in range(K):
                 df = dftrain.sample(frac=1.0, replace=True)
                 self.fit(model, df)
                 ypreds[:,i] = self.X[testinds]@self.beta
-            MSEs[j] = self.testeval(dftest)
+
+            MSEs[j] = np.mean(np.mean((y-ypreds.transpose())**2, axis=0))
             biass[j] = np.mean((y-np.mean(ypreds,axis=1))**2)
             variances[j] = np.mean(np.var(ypreds, axis=1))
             #print(MSE, bias, variance, self.sigma**2)
@@ -369,17 +370,18 @@ if __name__=="__main__":
 
     I = idk()
     I.gendat(500, noisefraq=0.001)
+    I.biasvar(20, OLS2, np.arange(1,15))
 
     ks = np.arange(2,6)
-    MSE = I.kfolderr(ks)
+    #MSE = I.kfolderr(ks)
     #degs = np.arange(1,10)
     #noises = np.logspace(-4,2,20)
     #I.degvnoiseerr(degs,noises)
 
     lambds = np.logspace(-8,-1,8)
     #I.MSEvlambda(lambds)
-    print(I.Bootstrap(1000,OLS))
-    print(I.beta)
+    #print(I.Bootstrap(1000,OLS))
+    #print(I.beta)
 
     lambds = np.logspace(-8,-1,50)
     #I.MSEvlambda(lambds)
