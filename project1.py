@@ -232,6 +232,9 @@ class idk:
         dftrain, dftest = np.split(self.df, [split])
         testinds = dftest.index
         y = dftest['y'].values
+        msebest = 1e10
+        if not self.compnoisy:
+            y = dftest['y_exact'].values
         for j,polydeg in enumerate(polydegs):
             self.changepolydeg((polydeg, polydeg))
             ypreds = np.zeros((len(dftest), K))
@@ -239,11 +242,18 @@ class idk:
                 df = dftrain.sample(frac=1.0, replace=True)
                 self.fit(model, df)
                 ypreds[:,i] = self.X[testinds]@self.beta
-
             MSEs[j] = np.mean(np.mean((y-ypreds.transpose())**2, axis=0))
             biass[j] = np.mean((y-np.mean(ypreds,axis=1))**2)
             variances[j] = np.mean(np.var(ypreds, axis=1))
+            if MSEs[j]<msebest:     #allows for easy plotting of best fit
+                msebest = MSEs[j]
+                betopt = self.beta
+                Xopt = self.X
+
             #print(MSE, bias, variance, self.sigma**2)
+        self.beta = betopt
+        self.X = Xopt
+
         plt.plot(polydegs, MSEs, label="MSE")
         plt.plot(polydegs, biass, label="bias")
         plt.plot(polydegs, variances, label="variance")
@@ -326,9 +336,9 @@ class idk:
             y = self.df['y']
         else:
             y = self.df['y_exact']
-        if not self.data:
-            print("Generate data first")
-            return
+        #if not self.data:
+        #    print("Generate data first")
+        #    return
         x1 = self.df['x1']; x2 = self.df['x2']
         triang = mtri.Triangulation(x1,x2)          #nevessary for unevenly spaced data
         fig = plt.figure()
@@ -336,10 +346,7 @@ class idk:
         #ax.plot_trisurf(triang,self.y,cmap='jet')
         ax.scatter(x1, x2, y, marker='.', s=10, c='green', alpha=0.5)
         if approx:
-            if self.hasfit:
-                ax.scatter(x1, self.x2, self.y_pred, marker='.', s=10, c='black', alpha=0.5)
-            else:
-                print("Fit data first")
+            ax.scatter(x1, x2, self.X@self.beta, marker='.', s=10, c='black', alpha=0.5)
 
         ax.view_init(elev=60, azim=-45)
 
@@ -360,6 +367,7 @@ if __name__=="__main__":
     I = idk()
     I.gendat(500, noisefraq=0.001)
     I.biasvar(20, OLS2, np.arange(1,15))
+    I.plot3D(False,True)
 
     ks = np.arange(2,6)
     #MSE = I.kfolderr(ks)
