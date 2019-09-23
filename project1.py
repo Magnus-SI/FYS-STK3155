@@ -24,7 +24,9 @@ def OLS(X,y):
     return np.einsum('ij,kj,k',XtXinv,X,y)
 
 def OLS2(X,y):
-    #OLS using scikit-learn
+    """
+    OLS using scikit-learn
+    """
     lr=LinearRegression(fit_intercept=False)
     lr.fit(X,y)
     return lr.coef_
@@ -40,16 +42,6 @@ def R2(y,y_model):
     score = 1 - (y - y_model)**2 / (y - np.mean(y_model))
     return score
 
-def var_beta(beta,y,y_model):
-    """
-    Retruns an array with the standard deviation of each beta parameter
-
-    Parametes:
-    beta : estimated array of betas
-    y : actual datapoints
-    y_model : modeled y values
-    """
-    sigma_sqr = np.sum()
 
 def FrankeFunction(x,y):
     #The franke function as given
@@ -61,6 +53,29 @@ def FrankeFunction(x,y):
 
 def functest(x,y):
     return x**3-x*y**2
+
+def var_beta_OLS(X, sigma):
+    """
+    Returns the variance of the beta values calculated by OLS
+
+    Paramaters :
+    X : Design matrix (numpy array)
+    sigma : the square root of the variance of the noise in the data
+    """
+    return sigma*np.sqrt(np.diagonal(np.sqrt(np.linalg.inv(np.transpose(X)@X))))
+
+def var_beta_Ridge(X, sigma, _lambda):
+    """
+    Returns the variance of the beta values calculated by Ridge
+
+    Paramaters :
+    X : Design matrix (numpy array)
+    sigma : the square root of the variance of the noise in the data
+    _lambda : hyperparameter used in the Ridge regression
+    """
+    lambda_mat = np.eye(X.shape[1])*_lambda
+    XTX = np.transpose(X)@X
+    return sigma*np.sqrt(np.diagonal(np.linalg.inv(XTX+lambda_mat)@XTX@np.transpose(np.linalg.inv(XTX + lambda_mat))))
 
 class idk:
     def __init__(self, seed=2):
@@ -112,7 +127,9 @@ class idk:
         self.changepolydeg(polydeg = deg)
 
     def changenoise(self, noisefraq):
-        "Changes the noise of the current data"
+        """
+        Changes the noise of the current data
+        """
         y_exact = self.df['y_exact']
         sigma = (np.max(y_exact)-np.min(y_exact))*noisefraq
         self.sigma = sigma
@@ -187,6 +204,8 @@ class idk:
 
     def MSEvlambda(self, lambds, method=Ridge(0), polydeg=(5,5), noises = np.logspace(-4,-2,2), avgnum=3):
         fig = plt.figure()
+        plt.xlabel("Polynomial degree")
+        plt.ylabel("Error")
         ax = fig.add_subplot(1,1,1)
         MSEs = np.zeros(len(lambds))
         self.gendat(self.N, noisefraq = noises[0], deg = polydeg)
@@ -262,7 +281,6 @@ class idk:
         plt.yscale("log")
         plt.show()
 
-
     def Bootstrap(self,K,model):
         """
         Calculates the confidence interval of each beta parameter through the
@@ -286,6 +304,7 @@ class idk:
         sigma_beta_sqr = np.sum((betas-avg_beta)**2,axis = 0)/K
         # Take square root to find the standard deviation
         sigma_beta = np.sqrt(sigma_beta_sqr)
+        print(sigma_beta.shape)
         return sigma_beta
 
     def ErrorAnalysis(self, poldeg=(4,4), noises=np.logspace(-2,2,5)):
@@ -365,22 +384,40 @@ class idk:
 if __name__=="__main__":
 
     I = idk()
-    I.gendat(500, noisefraq=0.001)
+
+    I.gendat(1000, noisefraq=0.001)
+    I.biasvar(20, OLS2, np.arange(1,15))
+
+    I.changepolydeg(polydeg = (5,5))
+    sigma_beta_Boot_OLS = I.Bootstrap(100,OLS2)
+
+    _lambda = 0.01
+    R = Ridge(_lambda)
+
+    sigma_beta_Boot_Ridge = I.Bootstrap(1000,R)
+    sigma_beta_theoretical_OSL = var_beta_OLS(I.X, I.sigma)
+
+    print("beta variances theoretical (OLS) = ", sigma_beta_theoretical_OSL)
+    print("beta variances bootstrap (OLS) = ", sigma_beta_Boot_OLS)
+
+    print("beta variances theoretical (Ridge) = ", var_beta_Ridge(I.X, I.sigma,_lambda))
+    print("beta variances bootstrap (Ridge) = ", sigma_beta_Boot_Ridge)
+
     I.biasvar(20, OLS2, np.arange(1,15))
     I.plot3D(False,True)
 
-    ks = np.arange(2,6)
+    #ks = np.arange(2,6)
     #MSE = I.kfolderr(ks)
     #degs = np.arange(1,10)
     #noises = np.logspace(-4,2,20)
     #I.degvnoiseerr(degs,noises)
 
-    lambds = np.logspace(-8,-1,8)
+    #lambds = np.logspace(-8,-1,8)
     #I.MSEvlambda(lambds)
     #print(I.Bootstrap(1000,OLS))
     #print(I.beta)
 
-    lambds = np.logspace(-8,-1,50)
+    #lambds = np.logspace(-8,-1,50)
     #I.MSEvlambda(lambds)
     #I = idk()
     #I.gendat(21**2, noisefraq = 1e-3, Function = functest, deg = (2,2), randpoints = False)
