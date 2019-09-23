@@ -23,7 +23,9 @@ def OLS(X,y):
     return np.einsum('ij,kj,k',XtXinv,X,y)
 
 def OLS2(X,y):
-    #OLS using scikit-learn
+    """
+    OLS using scikit-learn
+    """
     lr=LinearRegression(fit_intercept=False)
     lr.fit(X,y)
     return lr.coef_
@@ -39,16 +41,6 @@ def R2(y,y_model):
     score = 1 - (y - y_model)**2 / (y - np.mean(y_model))
     return score
 
-def var_beta(beta,y,y_model):
-    """
-    Retruns an array with the standard deviation of each beta parameter
-
-    Parametes:
-    beta : estimated array of betas
-    y : actual datapoints
-    y_model : modeled y values
-    """
-    sigma_sqr = np.sum()
 
 def FrankeFunction(x,y):
     #The franke function as given
@@ -60,6 +52,29 @@ def FrankeFunction(x,y):
 
 def functest(x,y):
     return x**3-x*y**2
+
+def var_beta_OLS(X, sigma):
+    """
+    Returns the variance of the beta values calculated by OLS
+
+    Paramaters :
+    X : Design matrix (numpy array)
+    sigma : the square root of the variance of the noise in the data
+    """
+    return sigma*np.sqrt(np.diagonal(np.sqrt(np.linalg.inv(np.transpose(X)@X))))
+
+def var_beta_Ridge(X, sigma, _lambda):
+    """
+    Returns the variance of the beta values calculated by Ridge
+
+    Paramaters :
+    X : Design matrix (numpy array)
+    sigma : the square root of the variance of the noise in the data
+    _lambda : hyperparameter used in the Ridge regression
+    """
+    lambda_mat = np.eye(X.shape[1])*_lambda
+    XTX = np.transpose(X)@X
+    return sigma*np.sqrt(np.diagonal(np.linalg.inv(XTX+lambda_mat)@XTX@np.transpose(np.linalg.inv(XTX + lambda_mat))))
 
 class idk:
     def __init__(self, seed=2):
@@ -105,6 +120,12 @@ class idk:
         self.changepolydeg(polydeg = deg)
 
     def changenoise(self, noisefraq):
+<<<<<<< Updated upstream
+=======
+        """
+        Changes the noise of the current data
+        """
+>>>>>>> Stashed changes
         y_exact = self.df['y_exact']
         sigma = (np.max(y_exact)-np.min(y_exact))*noisefraq
         mu = 0
@@ -178,6 +199,8 @@ class idk:
 
     def MSEvlambda(self, lambds, method=Ridge(0), polydeg=(5,5), noises = np.logspace(-4,-2,2), avgnum=3):
         fig = plt.figure()
+        plt.xlabel("Polynomial degree")
+        plt.ylabel("Error")
         ax = fig.add_subplot(1,1,1)
         MSEs = np.zeros(len(lambds))
         self.gendat(self.N, noisefraq = noises[0], deg = polydeg)
@@ -220,9 +243,39 @@ class idk:
         """
         WARNING: currently outdated, use at your own caution
 
+<<<<<<< Updated upstream
         Input:
         usenoisy: whether to compare the error of the predicted y
         to the noisy y or the actual y
+=======
+    def biasvar(self,K, model, polydegs):
+        split = int(0.8*self.N)
+        MSEs = np.zeros(len(polydegs))
+        biass = np.zeros(len(polydegs))
+        variances = np.zeros(len(polydegs))
+        for j,polydeg in enumerate(polydegs):
+            self.changepolydeg((polydeg, polydeg))
+            dftrain, dftest = np.split(self.df, [split])
+            testinds = dftest.index
+            y = dftest['y'].values
+
+            ypreds = np.zeros((len(dftest), K))
+            for i in range(K):
+                df = dftrain.sample(frac=1.0, replace=True)
+                self.fit(model, df)
+                ypreds[:,i] = self.X[testinds]@self.beta
+
+            MSEs[j] = np.mean(np.mean((y-ypreds.transpose())**2, axis=0))
+            biass[j] = np.mean((y-np.mean(ypreds, axis=1))**2)
+            variances[j] = np.mean(np.var(ypreds, axis=1))
+            #print(MSE, bias, variance, self.sigma**2)
+        plt.plot(polydegs, MSEs, label="MSE")
+        plt.plot(polydegs, biass, label="bias")
+        plt.plot(polydegs, variances, label="variance")
+        plt.legend()
+        plt.yscale("log")
+        plt.show()
+>>>>>>> Stashed changes
 
         Returns the MSE, and later the R2 score
         """
@@ -262,6 +315,7 @@ class idk:
         sigma_beta_sqr = np.sum((betas-avg_beta)**2,axis = 0)/K
         # Take square root to find the standard deviation
         sigma_beta = np.sqrt(sigma_beta_sqr)
+        print(sigma_beta.shape)
         return sigma_beta
 
     def ErrorAnalysis(self, poldeg=(4,4), noises=np.logspace(-2,2,5)):
@@ -343,7 +397,28 @@ class idk:
 if __name__=="__main__":
 
     I = idk()
+<<<<<<< Updated upstream
     I.gendat(500, noisefraq=0.001)
+=======
+    I.gendat(1000, noisefraq=0.001)
+    I.biasvar(20, OLS2, np.arange(1,15))
+>>>>>>> Stashed changes
+
+    I.changepolydeg(polydeg = (5,5))
+    sigma_beta_Boot_OLS = I.Bootstrap(100,OLS2)
+
+    _lambda = 0.01
+    R = Ridge(_lambda)
+
+    sigma_beta_Boot_Ridge = I.Bootstrap(1000,R)
+    sigma_beta_theoretical_OSL = var_beta_OLS(I.X, I.sigma)
+
+    print("beta variances theoretical (OLS) = ", sigma_beta_theoretical_OSL)
+    print("beta variances bootstrap (OLS) = ", sigma_beta_Boot_OLS)
+
+    print("beta variances theoretical (Ridge) = ", var_beta_Ridge(I.X, I.sigma,_lambda))
+    print("beta variances bootstrap (Ridge) = ", sigma_beta_Boot_Ridge)
+
 
     ks = np.arange(2,6)
     MSE = I.kfolderr(ks)
