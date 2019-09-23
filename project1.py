@@ -62,7 +62,8 @@ def var_beta_OLS(X, sigma):
     X : Design matrix (numpy array)
     sigma : the square root of the variance of the noise in the data
     """
-    return sigma*np.sqrt(np.diagonal(np.sqrt(np.linalg.inv(np.transpose(X)@X))))
+    XTXinv_diag = np.diagonal(np.linalg.inv(np.transpose(X)@X))
+    return sigma*np.sqrt(np.sqrt(XTXinv_diag))
 
 def var_beta_Ridge(X, sigma, _lambda):
     """
@@ -94,12 +95,6 @@ class idk:
         However, the code should be general enough that it would work anyways.
         N: Amount of data points generated
         noisefraq: fraction of data range in the y-direction as standard deviation
-        deg: degree of polynomial to generate initial design matrix
-        randpoints: whether to generate randomly spaced, or evenly spaced data
-
-        Returns:
-        Changes state of the class to include a dataframe of data with added noise,
-        as well as the design matrix
         """
         self.polydeg = deg
         df = pd.DataFrame()
@@ -137,7 +132,9 @@ class idk:
         self.df['y'] = y_exact + np.random.normal(mu, sigma, size=self.N)
 
     def changepolydeg(self, polydeg=(5,5)):
-        "Changes the polynomial degree of the design matrix"
+        """
+        Changes the polynomial degree of the design matrix
+        """
         self.polydeg = polydeg
         self.X = polyvander2d(self.df['x1'], self.df['x2'], polydeg)
 
@@ -183,6 +180,7 @@ class idk:
         self.beta = method(self.X[inds], y)
         #y_pred = self.predy(df)
         self.hasfit = True        #a fit has now been made
+        #self.y_pred = y_pred
 
     def testeval(self,dftest):
         """
@@ -391,33 +389,34 @@ if __name__=="__main__":
     I.changepolydeg(polydeg = (5,5))
     sigma_beta_Boot_OLS = I.Bootstrap(100,OLS2)
 
+    #print("betas = ",I.beta)
+
     _lambda = 0.01
     R = Ridge(_lambda)
 
     sigma_beta_Boot_Ridge = I.Bootstrap(1000,R)
-    sigma_beta_theoretical_OSL = var_beta_OLS(I.X, I.sigma)
+    sigma_beta_theoretical_OLS = var_beta_OLS(I.X, I.sigma)
 
-    print("beta variances theoretical (OLS) = ", sigma_beta_theoretical_OSL)
-    print("beta variances bootstrap (OLS) = ", sigma_beta_Boot_OLS)
+    #print("beta variances theoretical (OLS) = ", sigma_beta_theoretical_OLS)
+    #print("beta variances bootstrap (OLS) = ", sigma_beta_Boot_OLS)
+    #print("relative difference = ", np.abs(sigma_beta_theoretical_OLS-sigma_beta_Boot_OLS)/np.abs(sigma_beta_theoretical_OLS))
 
-    print("beta variances theoretical (Ridge) = ", var_beta_Ridge(I.X, I.sigma,_lambda))
-    print("beta variances bootstrap (Ridge) = ", sigma_beta_Boot_Ridge)
+    #print("beta variances theoretical (Ridge) = ", var_beta_Ridge(I.X, I.sigma,_lambda))
+    #print("beta variances bootstrap (Ridge) = ", sigma_beta_Boot_Ridge)
 
-    I.biasvar(20, OLS2, np.arange(1,15))
-    I.plot3D(False,True)
 
-    #ks = np.arange(2,6)
-    #MSE = I.kfolderr(ks)
+    ks = np.arange(2,6)
+    MSE = I.kfolderr(ks)
     #degs = np.arange(1,10)
     #noises = np.logspace(-4,2,20)
     #I.degvnoiseerr(degs,noises)
 
-    #lambds = np.logspace(-8,-1,8)
-    #I.MSEvlambda(lambds)
-    #print(I.Bootstrap(1000,OLS))
-    #print(I.beta)
+    lambds = np.logspace(-8,-1,8)
+    I.MSEvlambda(lambds)
+    print(I.Bootstrap(1000,OLS))
+    print(I.beta)
 
-    #lambds = np.logspace(-8,-1,50)
+    lambds = np.logspace(-8,-1,50)
     #I.MSEvlambda(lambds)
     #I = idk()
     #I.gendat(21**2, noisefraq = 1e-3, Function = functest, deg = (2,2), randpoints = False)
