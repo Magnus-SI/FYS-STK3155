@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.linear_model import LinearRegression
 import sklearn.linear_model as skl
 from sklearn.metrics import mean_squared_error as MSE
 from sklearn.model_selection import train_test_split as sklsplit
@@ -11,7 +11,8 @@ import matplotlib.tri as mtri
 from numpy.polynomial.polynomial import polyvander2d
 import pandas as pd
 import sys
-from Ridge import Ridge
+from Ridge import Ridge, Ridgeskl
+from Lasso import Lasso
 
 
 def OLS(X,y):
@@ -223,29 +224,16 @@ class idk:
         plt.legend()
         plt.show()
 
-    def biasvarawe(self):
-        polydegs = np.array([3,4,5,6])
-        betavars = np.zeros(len(polydegs))
-        self.gendat(self.N,noisefraq=1e-5, deg = (5,5))
-        for i,poly in enumerate(polydegs):
-            self.changepolydeg((poly, poly))
-            betavars[i] = np.sum(self.Bootstrap(1000,OLS))
-
-        plt.plot(polydegs,betavars)
-        plt.yscale("log")
-        plt.show()
-
     def biasvar(self,K, model, polydegs):
         split = int(0.8*self.N)
         MSEs = np.zeros(len(polydegs))
         biass = np.zeros(len(polydegs))
         variances = np.zeros(len(polydegs))
+        dftrain, dftest = np.split(self.df, [split])
+        testinds = dftest.index
+        y = dftest['y'].values
         for j,polydeg in enumerate(polydegs):
             self.changepolydeg((polydeg, polydeg))
-            dftrain, dftest = np.split(self.df, [split])
-            testinds = dftest.index
-            y = dftest['y'].values
-
             ypreds = np.zeros((len(dftest), K))
             for i in range(K):
                 df = dftrain.sample(frac=1.0, replace=True)
@@ -259,6 +247,7 @@ class idk:
         plt.plot(polydegs, MSEs, label="MSE")
         plt.plot(polydegs, biass, label="bias")
         plt.plot(polydegs, variances, label="variance")
+        plt.plot(polydegs, biass+variances+self.sigma**2,'--', label="bias+var")
         plt.legend()
         plt.yscale("log")
         plt.show()

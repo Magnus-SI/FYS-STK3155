@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import sklearn.linear_model as skl
 
 class Ridge():
     def __init__(self,lambda_):
@@ -19,6 +20,12 @@ class Ridge():
         """
         lmb_matrix = np.identity(X.shape[1])*self.lambda_
         return np.linalg.inv(np.transpose(X)@X+lmb_matrix)@np.transpose(X)@y
+
+class Ridgeskl(Ridge):
+    def __call__(self,X,y):
+        lr = skl.Ridge(self.lambda_, fit_intercept=False)
+        lr.fit(X,y)
+        return lr.coef_
 
 
 if __name__ == "__main__":
