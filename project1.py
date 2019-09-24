@@ -31,6 +31,13 @@ def OLS2(X,y):
     lr.fit(X,y)
     return lr.coef_
 
+def OLS3(X,y):
+    """
+    OLS using numpy pinv
+    """
+    beta = np.linalg.pinv(X)@y
+    return beta
+
 def R2(y,y_model):
     """
     Returns the R2 score for a dataset y and a set of predicted y values, y_model
@@ -62,7 +69,8 @@ def var_beta_OLS(X, sigma):
     X : Design matrix (numpy array)
     sigma : the square root of the variance of the noise in the data
     """
-    return sigma*np.sqrt(np.diagonal(np.sqrt(np.linalg.inv(np.transpose(X)@X))))
+    XTXinv_diag = np.diagonal(np.linalg.inv(np.transpose(X)@X))
+    return np.sqrt(sigma*XTXinv_diag)
 
 def var_beta_Ridge(X, sigma, _lambda):
     """
@@ -75,7 +83,7 @@ def var_beta_Ridge(X, sigma, _lambda):
     """
     lambda_mat = np.eye(X.shape[1])*_lambda
     XTX = np.transpose(X)@X
-    return sigma*np.sqrt(np.diagonal(np.linalg.inv(XTX+lambda_mat)@XTX@np.transpose(np.linalg.inv(XTX + lambda_mat))))
+    return np.sqrt(np.diagonal(sigma*np.linalg.inv(XTX+lambda_mat)@XTX@np.transpose(np.linalg.inv(XTX + lambda_mat))))
 
 class idk:
     def __init__(self, seed=2):
@@ -94,12 +102,6 @@ class idk:
         However, the code should be general enough that it would work anyways.
         N: Amount of data points generated
         noisefraq: fraction of data range in the y-direction as standard deviation
-        deg: degree of polynomial to generate initial design matrix
-        randpoints: whether to generate randomly spaced, or evenly spaced data
-
-        Returns:
-        Changes state of the class to include a dataframe of data with added noise,
-        as well as the design matrix
         """
         self.polydeg = deg
         df = pd.DataFrame()
@@ -137,7 +139,9 @@ class idk:
         self.df['y'] = y_exact + np.random.normal(mu, sigma, size=self.N)
 
     def changepolydeg(self, polydeg=(5,5)):
-        "Changes the polynomial degree of the design matrix"
+        """
+        Changes the polynomial degree of the design matrix
+        """
         self.polydeg = polydeg
         self.X = polyvander2d(self.df['x1'], self.df['x2'], polydeg)
 
@@ -183,6 +187,7 @@ class idk:
         self.beta = method(self.X[inds], y)
         #y_pred = self.predy(df)
         self.hasfit = True        #a fit has now been made
+        #self.y_pred = y_pred
 
     def testeval(self,dftest):
         """
@@ -279,6 +284,8 @@ class idk:
         plt.plot(polydegs, biass+variances+self.sigma**2,'--', label="bias+var")
         plt.legend()
         plt.yscale("log")
+        plt.xlabel("Degree of polynomial")
+        plt.ylabel("Errors")
         plt.show()
 
     def Bootstrap(self,K,model):
@@ -385,26 +392,33 @@ if __name__=="__main__":
 
     I = idk()
 
-    I.gendat(1000, noisefraq=0.001)
-    I.biasvar(20, OLS2, np.arange(1,15))
+    I.gendat(5000, noisefraq=0.001)
+    I.biasvar(20, OLS3, np.arange(1,15))
 
     I.changepolydeg(polydeg = (5,5))
-    sigma_beta_Boot_OLS = I.Bootstrap(100,OLS2)
+    sigma_beta_Boot_OLS = I.Bootstrap(1000,OLS3)
+
+    #print("betas = ",I.beta)
 
     _lambda = 0.01
     R = Ridge(_lambda)
 
     sigma_beta_Boot_Ridge = I.Bootstrap(1000,R)
-    sigma_beta_theoretical_OSL = var_beta_OLS(I.X, I.sigma)
+    sigma_beta_theoretical_OLS = var_beta_OLS(I.X, I.sigma)
+    sigma_beta_theoretical_Ridge = var_beta_Ridge(I.X, I.sigma,_lambda)
 
-    print("beta variances theoretical (OLS) = ", sigma_beta_theoretical_OSL)
-    print("beta variances bootstrap (OLS) = ", sigma_beta_Boot_OLS)
+    print("beta variances theoretical (OLS) = \n" sigma_beta_theoretical_OLS)
+    print("beta variances bootstrap (OLS) = \n", sigma_beta_Boot_OLS)
+    print("relative difference (OLS) = \n", np.abs(sigma_beta_theoretical_OLS-sigma_beta_Boot_OLS)/np.abs(sigma_beta_theoretical_OLS))
 
-    print("beta variances theoretical (Ridge) = ", var_beta_Ridge(I.X, I.sigma,_lambda))
-    print("beta variances bootstrap (Ridge) = ", sigma_beta_Boot_Ridge)
+    print("beta variances theoretical (Ridge) = \n", sigma_beta_theoretical_Ridge)
+    print("beta variances bootstrap (Ridge) = \n", sigma_beta_Boot_Ridge)
 
-    I.biasvar(20, OLS2, np.arange(1,15))
-    I.plot3D(False,True)
+    formatter = lambda x:'%.2f'%(x)
+    print("relative difference (Ridge) = ")
+    Ridge_diff = np.abs(sigma_beta_theoretical_Ridge-sigma_beta_Boot_Ridge)/np.abs(sigma_beta_theoretical_Ridge)
+    print(Ridge_diff)
+
 
     #ks = np.arange(2,6)
     #MSE = I.kfolderr(ks)
