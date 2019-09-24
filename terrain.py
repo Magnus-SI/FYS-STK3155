@@ -15,7 +15,7 @@ def OLS3(X,y):
     return beta
 
 class Terrain(idk):
-    def set_data(self,data,deg = (10,10)):
+    def set_data(self,data,deg = (6,6)):
         """
         Set the data
         """
@@ -76,11 +76,11 @@ if __name__ == '__main__':
 
     terrain.plot_terrain()
 
-    _lambda = 0.001
+    _lambda = 10
     frac = 0.0001
-    R = Ridgeskl(_lambda)
+    R = Ridge(_lambda)
     L = Lasso(_lambda)
-    terrain.fit_frac(L,frac)
+    terrain.fit_frac(R,frac)
     print("betas = ",terrain.beta)
     print("MSE = ",MSE(terrain.df['y'],terrain.X@terrain.beta))
 

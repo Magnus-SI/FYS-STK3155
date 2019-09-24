@@ -70,7 +70,7 @@ def var_beta_OLS(X, sigma):
     sigma : the square root of the variance of the noise in the data
     """
     XTXinv_diag = np.diagonal(np.linalg.inv(np.transpose(X)@X))
-    return sigma*np.sqrt(np.sqrt(XTXinv_diag))
+    return np.sqrt(sigma*XTXinv_diag)
 
 def var_beta_Ridge(X, sigma, _lambda):
     """
@@ -83,7 +83,7 @@ def var_beta_Ridge(X, sigma, _lambda):
     """
     lambda_mat = np.eye(X.shape[1])*_lambda
     XTX = np.transpose(X)@X
-    return sigma*np.sqrt(np.diagonal(np.linalg.inv(XTX+lambda_mat)@XTX@np.transpose(np.linalg.inv(XTX + lambda_mat))))
+    return np.sqrt(np.diagonal(sigma*np.linalg.inv(XTX+lambda_mat)@XTX@np.transpose(np.linalg.inv(XTX + lambda_mat))))
 
 class idk:
     def __init__(self, seed=2):
@@ -392,7 +392,7 @@ if __name__=="__main__":
 
     I = idk()
 
-    I.gendat(1000, noisefraq=0.001)
+    I.gendat(5000, noisefraq=0.001)
     I.biasvar(20, OLS3, np.arange(1,15))
 
     I.changepolydeg(polydeg = (5,5))
@@ -403,15 +403,21 @@ if __name__=="__main__":
     _lambda = 0.01
     R = Ridge(_lambda)
 
-    #sigma_beta_Boot_Ridge = I.Bootstrap(1000,R)
+    sigma_beta_Boot_Ridge = I.Bootstrap(1000,R)
     sigma_beta_theoretical_OLS = var_beta_OLS(I.X, I.sigma)
+    sigma_beta_theoretical_Ridge = var_beta_Ridge(I.X, I.sigma,_lambda)
 
-    print("beta variances theoretical (OLS) = ", sigma_beta_theoretical_OLS)
-    print("beta variances bootstrap (OLS) = ", sigma_beta_Boot_OLS)
-    print("relative difference = ", np.abs(sigma_beta_theoretical_OLS-sigma_beta_Boot_OLS)/np.abs(sigma_beta_theoretical_OLS))
+    print("beta variances theoretical (OLS) = \n" sigma_beta_theoretical_OLS)
+    print("beta variances bootstrap (OLS) = \n", sigma_beta_Boot_OLS)
+    print("relative difference (OLS) = \n", np.abs(sigma_beta_theoretical_OLS-sigma_beta_Boot_OLS)/np.abs(sigma_beta_theoretical_OLS))
 
-    #print("beta variances theoretical (Ridge) = ", var_beta_Ridge(I.X, I.sigma,_lambda))
-    #print("beta variances bootstrap (Ridge) = ", sigma_beta_Boot_Ridge)
+    print("beta variances theoretical (Ridge) = \n", sigma_beta_theoretical_Ridge)
+    print("beta variances bootstrap (Ridge) = \n", sigma_beta_Boot_Ridge)
+
+    formatter = lambda x:'%.2f'%(x)
+    print("relative difference (Ridge) = ")
+    Ridge_diff = np.abs(sigma_beta_theoretical_Ridge-sigma_beta_Boot_Ridge)/np.abs(sigma_beta_theoretical_Ridge)
+    print(Ridge_diff)
 
 
     #ks = np.arange(2,6)
