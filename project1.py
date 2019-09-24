@@ -31,6 +31,13 @@ def OLS2(X,y):
     lr.fit(X,y)
     return lr.coef_
 
+def OLS3(X,y):
+    """
+    OLS using numpy pinv
+    """
+    beta = np.linalg.pinv(X)@y
+    return beta
+
 def R2(y,y_model):
     """
     Returns the R2 score for a dataset y and a set of predicted y values, y_model
@@ -277,6 +284,8 @@ class idk:
         plt.plot(polydegs, biass+variances+self.sigma**2,'--', label="bias+var")
         plt.legend()
         plt.yscale("log")
+        plt.xlabel("Degree of polynomial")
+        plt.ylabel("Errors")
         plt.show()
 
     def Bootstrap(self,K,model):
@@ -384,39 +393,39 @@ if __name__=="__main__":
     I = idk()
 
     I.gendat(1000, noisefraq=0.001)
-    I.biasvar(20, OLS2, np.arange(1,15))
+    I.biasvar(20, OLS3, np.arange(1,15))
 
     I.changepolydeg(polydeg = (5,5))
-    sigma_beta_Boot_OLS = I.Bootstrap(100,OLS2)
+    sigma_beta_Boot_OLS = I.Bootstrap(1000,OLS3)
 
     #print("betas = ",I.beta)
 
     _lambda = 0.01
     R = Ridge(_lambda)
 
-    sigma_beta_Boot_Ridge = I.Bootstrap(1000,R)
+    #sigma_beta_Boot_Ridge = I.Bootstrap(1000,R)
     sigma_beta_theoretical_OLS = var_beta_OLS(I.X, I.sigma)
 
-    #print("beta variances theoretical (OLS) = ", sigma_beta_theoretical_OLS)
-    #print("beta variances bootstrap (OLS) = ", sigma_beta_Boot_OLS)
-    #print("relative difference = ", np.abs(sigma_beta_theoretical_OLS-sigma_beta_Boot_OLS)/np.abs(sigma_beta_theoretical_OLS))
+    print("beta variances theoretical (OLS) = ", sigma_beta_theoretical_OLS)
+    print("beta variances bootstrap (OLS) = ", sigma_beta_Boot_OLS)
+    print("relative difference = ", np.abs(sigma_beta_theoretical_OLS-sigma_beta_Boot_OLS)/np.abs(sigma_beta_theoretical_OLS))
 
     #print("beta variances theoretical (Ridge) = ", var_beta_Ridge(I.X, I.sigma,_lambda))
     #print("beta variances bootstrap (Ridge) = ", sigma_beta_Boot_Ridge)
 
 
-    ks = np.arange(2,6)
-    MSE = I.kfolderr(ks)
+    #ks = np.arange(2,6)
+    #MSE = I.kfolderr(ks)
     #degs = np.arange(1,10)
     #noises = np.logspace(-4,2,20)
     #I.degvnoiseerr(degs,noises)
 
-    lambds = np.logspace(-8,-1,8)
-    I.MSEvlambda(lambds)
-    print(I.Bootstrap(1000,OLS))
-    print(I.beta)
+    #lambds = np.logspace(-8,-1,8)
+    #I.MSEvlambda(lambds)
+    #print(I.Bootstrap(1000,OLS))
+    #print(I.beta)
 
-    lambds = np.logspace(-8,-1,50)
+    #lambds = np.logspace(-8,-1,50)
     #I.MSEvlambda(lambds)
     #I = idk()
     #I.gendat(21**2, noisefraq = 1e-3, Function = functest, deg = (2,2), randpoints = False)

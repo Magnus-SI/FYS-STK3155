@@ -79,7 +79,8 @@ if __name__ == '__main__':
     _lambda = 0.001
     frac = 0.0001
     R = Ridgeskl(_lambda)
-    terrain.fit_frac(R,frac)
+    L = Lasso(_lambda)
+    terrain.fit_frac(L,frac)
     print("betas = ",terrain.beta)
     print("MSE = ",MSE(terrain.df['y'],terrain.X@terrain.beta))
 

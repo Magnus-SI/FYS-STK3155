@@ -3,12 +3,12 @@ import matplotlib.pyplot as plt
 import sklearn.linear_model as skl
 
 class Ridge():
-    def __init__(self,lambda_):
+    def __init__(self,_lambda):
         """
         Parameters:
-        lambda_ : Hyperparameter
+        _lambda : Hyperparameter
         """
-        self.lambda_ = lambda_
+        self._lambda = _lambda
 
     def __call__(self,X,y):
         """
@@ -18,12 +18,12 @@ class Ridge():
         X : Design matrix
         y : Datapoints
         """
-        lmb_matrix = np.identity(X.shape[1])*self.lambda_
+        lmb_matrix = np.identity(X.shape[1])*self._lambda
         return np.linalg.inv(np.transpose(X)@X+lmb_matrix)@np.transpose(X)@y
 
 class Ridgeskl(Ridge):
     def __call__(self,X,y):
-        lr = skl.Ridge(self.lambda_, fit_intercept=False)
+        lr = skl.Ridge(self._lambda, fit_intercept=False)
         lr.fit(X,y)
         return lr.coef_
 
@@ -37,13 +37,13 @@ if __name__ == "__main__":
     act_beta = [1.0,2.0,10]
     y = act_beta[0] + act_beta[1]*x + act_beta[2] * x**2 + noise*np.random.normal(size = N)
     plt.plot(x,y,'.')
-    lambda_ = 0.2
-    model = Ridge(lambda_)
+    _lambda = 0.2
+    model = Ridge(_lambda)
     deg = 2
     X = np.polynomial.polynomial.polyvander(x,deg)
     betas = model(X,y)
     xi = np.linspace(0,x_stop,1000)
-    print("lambda = ", lambda_)
+    print("lambda = ", _lambda)
     print("Values for beta = ",betas,"\nActual values = ",act_beta)
     plt.plot(xi,betas[0] + xi * betas[1] + xi**2 * betas[2])
     plt.show()
