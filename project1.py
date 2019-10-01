@@ -125,6 +125,8 @@ class idk:
         df['y_exact'] = y_exact
 
         self.df = df
+        if not randpoints:
+            self.df = df.sample(frac=1.0)
         self.changenoise(noisefraq = noisefraq)
         self.changepolydeg(polydeg = deg)
 
@@ -141,9 +143,13 @@ class idk:
     def changepolydeg(self, polydeg=(5,5)):
         """
         Changes the polynomial degree of the design matrix
+        Also normalizes the design matrix
         """
         self.polydeg = polydeg
-        self.X = polyvander2d(self.df['x1'], self.df['x2'], polydeg)
+        X = polyvander2d(self.df['x1'], self.df['x2'], polydeg)
+        norms = np.max(X,axis=0)
+        self.X = X/norms    #normalized
+        #self.norms = norms
 
     def kfoldsplit(self,k=5):
         """
@@ -184,7 +190,7 @@ class idk:
             df = self.df
         y  = df['y']
         inds = df.index
-        self.beta = method(self.X[inds], y)
+        self.beta = method(self.X[inds], y) #note that this beta is inverse normalized
         #y_pred = self.predy(df)
         self.hasfit = True        #a fit has now been made
         #self.y_pred = y_pred
@@ -198,7 +204,7 @@ class idk:
             print("Error : run fit before testeval")
             sys.exit(1)
         inds = dftest.index
-        y_pred = self.X[inds]@self.beta
+        y_pred = self.X[inds]@self.beta     #normalized X @ invnormalized beta -> unnormalized y
         if self.compnoisy:
             y = dftest['y']
         else:
@@ -407,7 +413,7 @@ if __name__=="__main__":
     sigma_beta_theoretical_OLS = var_beta_OLS(I.X, I.sigma)
     sigma_beta_theoretical_Ridge = var_beta_Ridge(I.X, I.sigma,_lambda)
 
-    print("beta variances theoretical (OLS) = \n" sigma_beta_theoretical_OLS)
+    print("beta variances theoretical (OLS) = \n", sigma_beta_theoretical_OLS)
     print("beta variances bootstrap (OLS) = \n", sigma_beta_Boot_OLS)
     print("relative difference (OLS) = \n", np.abs(sigma_beta_theoretical_OLS-sigma_beta_Boot_OLS)/np.abs(sigma_beta_theoretical_OLS))
 
