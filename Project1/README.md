@@ -1,3 +1,2 @@
 # Project 1
-Here are the files for project 1
-$$\frac{1}{2}$$
+This folder contains the programs used in project 1. Below are figures from the report, along with additional figures
