@@ -85,7 +85,7 @@ def var_beta_Ridge(X, sigma, _lambda):
     XTX = np.transpose(X)@X
     return np.sqrt(np.diagonal(sigma*np.linalg.inv(XTX+lambda_mat)@XTX@np.transpose(np.linalg.inv(XTX + lambda_mat))))
 
-class idk:
+class Project1:
     def __init__(self, seed=2):
         np.random.seed(seed)
         self.data = False         #data is not yet generated
@@ -270,6 +270,7 @@ class idk:
             ypreds = np.zeros((len(dftest), K))
             for i in range(K):
                 df = dftrain.sample(frac=1.0, replace=True)
+                #df = dftrain
                 self.fit(model, df)
                 ypreds[:,i] = self.X[testinds]@self.beta
             MSEs[j] = np.mean(np.mean((y-ypreds.transpose())**2, axis=0))
@@ -289,7 +290,7 @@ class idk:
         plt.plot(polydegs, variances, label="variance")
         plt.plot(polydegs, biass+variances+self.sigma**2,'--', label="bias+var")
         plt.legend()
-        plt.yscale("log")
+        #plt.yscale("log")
         plt.xlabel("Degree of polynomial")
         plt.ylabel("Errors")
         plt.show()
@@ -396,34 +397,36 @@ class idk:
 
 if __name__=="__main__":
 
-    I = idk()
+    I = Project1()
+    #I.gendat(2000, noisefraq=0.001)
+    #I.biasvar(20,OLS3,np.arange(1,20))
 
-    I.gendat(5000, noisefraq=0.001)
-    I.biasvar(20, OLS3, np.arange(1,15))
+    # I.gendat(5000, noisefraq=0.001)
+    # I.biasvar(20, OLS3, np.arange(1,15))
 
-    I.changepolydeg(polydeg = (5,5))
-    sigma_beta_Boot_OLS = I.Bootstrap(1000,OLS3)
+    # I.changepolydeg(polydeg = (5,5))
+    # sigma_beta_Boot_OLS = I.Bootstrap(1000,OLS3)
 
-    #print("betas = ",I.beta)
-
-    _lambda = 0.01
-    R = Ridge(_lambda)
-
-    sigma_beta_Boot_Ridge = I.Bootstrap(1000,R)
-    sigma_beta_theoretical_OLS = var_beta_OLS(I.X, I.sigma)
-    sigma_beta_theoretical_Ridge = var_beta_Ridge(I.X, I.sigma,_lambda)
-
-    print("beta variances theoretical (OLS) = \n", sigma_beta_theoretical_OLS)
-    print("beta variances bootstrap (OLS) = \n", sigma_beta_Boot_OLS)
-    print("relative difference (OLS) = \n", np.abs(sigma_beta_theoretical_OLS-sigma_beta_Boot_OLS)/np.abs(sigma_beta_theoretical_OLS))
-
-    print("beta variances theoretical (Ridge) = \n", sigma_beta_theoretical_Ridge)
-    print("beta variances bootstrap (Ridge) = \n", sigma_beta_Boot_Ridge)
-
-    formatter = lambda x:'%.2f'%(x)
-    print("relative difference (Ridge) = ")
-    Ridge_diff = np.abs(sigma_beta_theoretical_Ridge-sigma_beta_Boot_Ridge)/np.abs(sigma_beta_theoretical_Ridge)
-    print(Ridge_diff)
+    # #print("betas = ",I.beta)
+    #
+    # _lambda = 0.01
+    # R = Ridge(_lambda)
+    #
+    # sigma_beta_Boot_Ridge = I.Bootstrap(1000,R)
+    # sigma_beta_theoretical_OLS = var_beta_OLS(I.X, I.sigma)
+    # sigma_beta_theoretical_Ridge = var_beta_Ridge(I.X, I.sigma,_lambda)
+    #
+    # print("beta variances theoretical (OLS) = \n", sigma_beta_theoretical_OLS)
+    # print("beta variances bootstrap (OLS) = \n", sigma_beta_Boot_OLS)
+    # print("relative difference (OLS) = \n", np.abs(sigma_beta_theoretical_OLS-sigma_beta_Boot_OLS)/np.abs(sigma_beta_theoretical_OLS))
+    #
+    # print("beta variances theoretical (Ridge) = \n", sigma_beta_theoretical_Ridge)
+    # print("beta variances bootstrap (Ridge) = \n", sigma_beta_Boot_Ridge)
+    #
+    # formatter = lambda x:'%.2f'%(x)
+    # print("relative difference (Ridge) = ")
+    # Ridge_diff = np.abs(sigma_beta_theoretical_Ridge-sigma_beta_Boot_Ridge)/np.abs(sigma_beta_theoretical_Ridge)
+    # print(Ridge_diff)
 
 
     #ks = np.arange(2,6)
