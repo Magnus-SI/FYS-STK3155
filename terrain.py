@@ -15,7 +15,7 @@ def OLS3(X,y):
     return beta
 
 class Terrain(idk):
-    def set_data(self,data,deg = (6,6)):
+    def set_data(self,data,deg = (8,8),indices=False):
         """
         Set the data
         """
@@ -25,6 +25,11 @@ class Terrain(idk):
         self.Nx, self.Ny = data.shape
 
         x1, x2 = np.meshgrid(np.arange(self.Ny),np.arange(self.Nx))
+        if indices:
+            x1 = x1[0:300, 300:500]
+            x2 = x2[0:300, 300:500]
+            data = data[0:300, 300:500]
+            self.Nx, self.Ny = data.shape
         x1 = x1.flatten()
         x2 = x2.flatten()
         y = data.flatten()
@@ -72,12 +77,14 @@ if __name__ == '__main__':
     filename = "SRTM_data_Norway_1.tif"
     terrain_data = imread(filename)
     terrain = Terrain()
-    terrain.set_data(terrain_data)
+    plt.imshow(terrain_data)
+    plt.show()
+    terrain.set_data(terrain_data,deg = (30,30),indices = True)
 
     terrain.plot_terrain()
 
-    _lambda = 10
-    frac = 0.0001
+    _lambda = 0.001
+    frac = 0.8
     R = Ridge(_lambda)
     L = Lasso(_lambda)
     terrain.fit_frac(R,frac)
