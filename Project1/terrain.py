@@ -1,4 +1,4 @@
-from project1 import idk, OLS, MSE, OLS2
+from project1 import Project1, OLS, MSE, OLS2
 from imageio import imread
 import pandas as pd
 import numpy as np
@@ -14,7 +14,7 @@ def OLS3(X,y):
     beta = np.linalg.pinv(X)@y
     return beta
 
-class Terrain(idk):
+class Terrain(Project1):
     def set_data(self,data,deg = (8,8),indices=False):
         """
         Set the data
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     terrain = Terrain()
     plt.imshow(terrain_data)
     plt.show()
-    terrain.set_data(terrain_data,deg = (30,30),indices = True)
+    terrain.set_data(terrain_data,deg = (10,10),indices = True)
 
     terrain.plot_terrain()
 
@@ -92,6 +92,16 @@ if __name__ == '__main__':
     print("MSE = ",MSE(terrain.df['y'],terrain.X@terrain.beta))
 
     terrain.plot_fit()
+    deg = np.arange(3,21)
+    MSE_kfold = np.zeros_like(deg)
+    for i,d in enumerate(deg):
+        print(i)
+        terrain.set_data(terrain_data,deg=(d,d),indices = True)
+        err = terrain.kfolderr(method=OLS3)
+        MSE_kfold[i] = err
+    plt.figure()
+    plt.plot(deg,MSE_kfold)
+    plt.show()
     """
     terrain.fit(OLS3)
 
