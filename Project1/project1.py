@@ -178,6 +178,21 @@ class Project1:
                 counter+=1
         return MSE/counter      #average mean square error
 
+    def trainvtesterr(self):
+        """
+        Splits data into training and test data, fits on training, and evaluates
+        error on both training and tests.
+        This can be done for varying complexities.
+        """
+        pass
+
+    def trainerr(self, method):
+        """
+        Trains on, and evalutes error on the whole data set
+        """
+        self.fit(method, df=None)
+        MSE = self.testeval(self.df)
+        return MSE
 
     def fit(self, method, df=None):
         """
@@ -212,6 +227,40 @@ class Project1:
         N = len(y)
         MSE = 1/N * np.sum((y_pred - y)**2)
         return MSE
+
+    def lambda_vs_complexity_error(self, lambds, polydegs, regtype, noise):
+        """
+        Generates a heat map comparing performance of the hyperparamater lambda
+        for either Ridge or Lasso, with varying complexity. Checks performance both
+        on test-data using k-fold error, and on training data.
+        *Input*
+        lambds: lambda values to evaluate
+        polydegs: polynomial degrees to test for, corresponding to complexity
+        regtype: Ridge or Lasso
+        noise: noise to add to the data
+        (cost_func): maybe add functionality to pick between R2 score and MSE as a cost function
+
+        Note that train errors and test errors do not use exactly the same training set
+        because of the nature of the k-fold error evaluation. Results should still be similar
+        to if they were however.
+        """
+        TestErrors = np.zeros((len(polydegs), len(lambds)))
+        TrainErrors = np.zeros((len(polydegs), len(lambds)))
+        self.changenoise(noise)
+        for i,deg in enumerate(polydegs):
+            self.changepolydeg((deg,deg))
+            for j,lambd in enumerate(lambds):
+                #print(i,j)
+                #might reset lambda value of regtype here, instead of initializing new class all the time
+                #can't be done right now because of how the Lasso function is structured.
+                TestErrors[i,j] = self.kfolderr(ks = np.arange(2,6), method = regtype(lambd))
+                TrainErrors[i,j] = self.trainerr(method = regtype(lambd))
+        # plt.figure()
+        # plt.imshow(TestErrors)
+        # plt.figure()
+        # plt.imshow(TrainErrors)
+        return TestErrors, TrainErrors
+
 
     def MSEvlambda(self, lambds, method=Ridge(0), polydeg=(5,5), noises = np.logspace(-4,-2,2), avgnum=3):
         fig = plt.figure()
@@ -398,6 +447,12 @@ class Project1:
 if __name__=="__main__":
 
     I = Project1()
+    I.gendat(200, noisefraq=1e-4)
+    lambds = np.logspace(-5,-3,3)
+    polydegs = np.array([3,4,5])
+    regtype = Ridge
+    noise = 1e-3
+    TestErrors, TrainErrors = I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise)
     #I.gendat(2000, noisefraq=0.001)
     #I.biasvar(20,OLS3,np.arange(1,20))
 
