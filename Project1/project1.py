@@ -13,6 +13,7 @@ import pandas as pd
 import sys
 from Ridge import Ridge, Ridgeskl
 from Lasso import Lasso
+import seaborn as sns
 
 
 def OLS(X,y):
@@ -91,6 +92,7 @@ class Project1:
         self.data = False         #data is not yet generated
         self.hasfit = False       #a fit has not yet been made
         self.compnoisy = True   #evaluate error compared to noisy data
+        self.cost = "MSE"       #defines which cost function to use
         pass
 
 
@@ -164,19 +166,20 @@ class Project1:
 
     def kfolderr(self,ks=np.arange(2,6), method=OLS):
         """
-        Evaluetes the kfold error
+        Evaluates the kfold error
+        ks:
         """
         counter = 0
-        MSE = 0
+        cost = 0
         for k in ks:
             dfsplit = self.kfoldsplit(k)                        #split data
             for i in range(len(dfsplit)):
                 dftrain = pd.concat(dfsplit[:i]+dfsplit[i+1:])  #training data
                 self.fit(method,dftrain)        #fit with training data
                 dftest = dfsplit[i]             #test data
-                MSE += self.testeval(dftest)    #MSE on test data
+                cost += self.testeval(dftest)    #cost on test data
                 counter+=1
-        return MSE/counter      #average mean square error
+        return cost/counter      #average mean square error
 
     def trainvtesterr(self):
         """
@@ -191,8 +194,8 @@ class Project1:
         Trains on, and evalutes error on the whole data set
         """
         self.fit(method, df=None)
-        MSE = self.testeval(self.df)
-        return MSE
+        cost = self.testeval(self.df)
+        return cost
 
     def fit(self, method, df=None):
         """
@@ -214,6 +217,7 @@ class Project1:
         """
         Evaluates MSE for current beta fit, on a given set of test data
         dftest: pandas dataframe containing test data
+        self.cost: MSE or R2
         """
         if not self.hasfit:
             print("Error : run fit before testeval")
@@ -225,8 +229,15 @@ class Project1:
         else:
             y = dftest['y_exact']
         N = len(y)
-        MSE = 1/N * np.sum((y_pred - y)**2)
-        return MSE
+        if self.cost == "MSE":
+            MSE = 1/N * np.sum((y_pred - y)**2)
+            return MSE
+        elif self.cost == "R2":
+            score = 1 - np.sum((y - y_pred)**2) / np.sum((y - np.mean(y))**2)
+            return score
+        else:
+            print("Choose from MSE or R2 as a cost function")
+            sys.exit(1)
 
     def lambda_vs_complexity_error(self, lambds, polydegs, regtype, noise):
         """
@@ -255,10 +266,17 @@ class Project1:
                 #can't be done right now because of how the Lasso function is structured.
                 TestErrors[i,j] = self.kfolderr(ks = np.arange(2,6), method = regtype(lambd))
                 TrainErrors[i,j] = self.trainerr(method = regtype(lambd))
-        # plt.figure()
-        # plt.imshow(TestErrors)
-        # plt.figure()
-        # plt.imshow(TrainErrors)
+        f, axs = plt.subplots(2,1, figsize=(12,12))
+        ax1, ax2 = axs
+        h1=sns.heatmap(data=TestErrors,annot=True,cmap='viridis',ax=ax1,xticklabels=np.log10(lambds), yticklabels=polydegs)
+        ax1.set_xlabel(r'$log10(\lambda)$')
+        ax1.set_ylabel('Polynomial degree')
+        ax1.set_title('Test Error')
+        h2=sns.heatmap(data=TrainErrors,annot=True,cmap='viridis',ax=ax2,xticklabels=np.log10(lambds), yticklabels=polydegs)
+        ax2.set_xlabel(r'$log10(\lambda)$')
+        ax2.set_ylabel('Polynomial degree')
+        ax2.set_title('Train Error')
+        plt.show()
         return TestErrors, TrainErrors
 
 
@@ -448,10 +466,11 @@ if __name__=="__main__":
 
     I = Project1()
     I.gendat(200, noisefraq=1e-4)
-    lambds = np.logspace(-5,-3,3)
-    polydegs = np.array([3,4,5])
+    lambds = np.logspace(-9,-2,8)
+    polydegs = np.arange(2,14)
     regtype = Ridge
-    noise = 1e-3
+    noise = 1e-2
+    I.cost = "R2"
     TestErrors, TrainErrors = I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise)
     #I.gendat(2000, noisefraq=0.001)
     #I.biasvar(20,OLS3,np.arange(1,20))
