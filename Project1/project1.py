@@ -93,6 +93,8 @@ class Project1:
         self.hasfit = False       #a fit has not yet been made
         self.compnoisy = True   #evaluate error compared to noisy data
         self.cost = "MSE"       #defines which cost function to use
+        self.frac = 1.0         #fraction of the data to use
+        self.noexact = True       #if True, data is loaded and not generated, so no y_exact will exist
         pass
 
 
@@ -136,6 +138,8 @@ class Project1:
         """
         Changes the noise of the current data
         """
+        if self.noexact:
+            return          #y_exact does not exist, prevents error
         y_exact = self.df['y_exact']
         sigma = (np.max(y_exact)-np.min(y_exact))*noisefraq
         self.sigma = sigma
@@ -153,12 +157,12 @@ class Project1:
         self.X = X/norms    #normalized
         #self.norms = norms
 
-    def kfoldsplit(self,k=5):
+    def kfoldsplit(self,k, df):
         """
         Splits data into k equally sized sets, 1 of which will be used for testing,
         the rest for training
         """
-        df = self.df.sample(frac=1.0)     #ensures random order of data
+        df = df.sample(frac=1.0)     #ensures random order of data
         splitinds = len(df) * np.arange(1,k)/k  #indices to split at
         splitinds = splitinds.astype(int)
         dfsplit = np.split(df,splitinds)    #contains k dataframes, with the different sets of data
@@ -168,11 +172,13 @@ class Project1:
         """
         Evaluates the kfold error
         ks:
+        self.frac: can be smaller than 1 if dataset is large
         """
         counter = 0
         cost = 0
+        df = self.df.sample(frac=self.frac)     #same set of data used for all k-splits
         for k in ks:
-            dfsplit = self.kfoldsplit(k)                        #split data
+            dfsplit = self.kfoldsplit(k, df)                        #split data
             for i in range(len(dfsplit)):
                 dftrain = pd.concat(dfsplit[:i]+dfsplit[i+1:])  #training data
                 self.fit(method,dftrain)        #fit with training data
@@ -193,8 +199,9 @@ class Project1:
         """
         Trains on, and evalutes error on the whole data set
         """
-        self.fit(method, df=None)
-        cost = self.testeval(self.df)
+        df = self.df.sample(frac = self.frac)
+        self.fit(method, df)
+        cost = self.testeval(df)
         return cost
 
     def fit(self, method, df=None):
@@ -205,7 +212,7 @@ class Project1:
         (lambda): necessary when Ridge and Lasso is implemented
         """
         if df is None:
-            df = self.df
+            df = self.df.sample(frac = self.frac)      #note that this randomizes even if self.frac=1.0
         y  = df['y']
         inds = df.index
         self.beta = method(self.X[inds], y) #note that this beta is inverse normalized
@@ -239,7 +246,7 @@ class Project1:
             print("Choose from MSE or R2 as a cost function")
             sys.exit(1)
 
-    def lambda_vs_complexity_error(self, lambds, polydegs, regtype, noise):
+    def lambda_vs_complexity_error(self, lambds, polydegs, regtype, noise, showvals = True):
         """
         Generates a heat map comparing performance of the hyperparamater lambda
         for either Ridge or Lasso, with varying complexity. Checks performance both
@@ -249,7 +256,8 @@ class Project1:
         polydegs: polynomial degrees to test for, corresponding to complexity
         regtype: Ridge or Lasso
         noise: noise to add to the data
-        (cost_func): maybe add functionality to pick between R2 score and MSE as a cost function
+        showvals: True if show values on colors, False if not
+        cost function: self.cost determines whether to use R2 or MSE for plotting
 
         Note that train errors and test errors do not use exactly the same training set
         because of the nature of the k-fold error evaluation. Results should still be similar
@@ -261,23 +269,29 @@ class Project1:
         for i,deg in enumerate(polydegs):
             self.changepolydeg((deg,deg))
             for j,lambd in enumerate(lambds):
-                #print(i,j)
+                print(i,j)
                 #might reset lambda value of regtype here, instead of initializing new class all the time
                 #can't be done right now because of how the Lasso function is structured.
                 TestErrors[i,j] = self.kfolderr(ks = np.arange(2,6), method = regtype(lambd))
                 TrainErrors[i,j] = self.trainerr(method = regtype(lambd))
+
+        #Plotting the data
+        if self.cost=="R2":
+            vmin = 0; vmax = 1
+        elif self.cost=="MSE":
+            vmin = False; vmax = False
         f, axs = plt.subplots(2,1, figsize=(12,12))
         ax1, ax2 = axs
-        h1=sns.heatmap(data=TestErrors,annot=True,cmap='viridis',ax=ax1,xticklabels=np.log10(lambds), yticklabels=polydegs)
+        h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',ax=ax1,xticklabels=np.log10(lambds), yticklabels=polydegs, vmin = vmin, vmax = vmax)
         ax1.set_xlabel(r'$log10(\lambda)$')
         ax1.set_ylabel('Polynomial degree')
         ax1.set_title('Test Error')
-        h2=sns.heatmap(data=TrainErrors,annot=True,cmap='viridis',ax=ax2,xticklabels=np.log10(lambds), yticklabels=polydegs)
+        h2=sns.heatmap(data=TrainErrors,annot=showvals,cmap='viridis',ax=ax2,xticklabels=np.log10(lambds), yticklabels=polydegs, vmin = vmin, vmax = vmax)
         ax2.set_xlabel(r'$log10(\lambda)$')
         ax2.set_ylabel('Polynomial degree')
         ax2.set_title('Train Error')
         plt.show()
-        return TestErrors, TrainErrors
+        #return TestErrors, TrainErrors
 
 
     def MSEvlambda(self, lambds, method=Ridge(0), polydeg=(5,5), noises = np.logspace(-4,-2,2), avgnum=3):
@@ -466,12 +480,16 @@ if __name__=="__main__":
 
     I = Project1()
     I.gendat(200, noisefraq=1e-4)
-    lambds = np.logspace(-9,-2,8)
+    lambds = np.logspace(-9,-1,17)
     polydegs = np.arange(2,14)
     regtype = Ridge
     noise = 1e-2
     I.cost = "R2"
-    TestErrors, TrainErrors = I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise)
+    I.frac = 1.0
+    #I.compnoisy=False
+    from time import time
+    I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise)
+
     #I.gendat(2000, noisefraq=0.001)
     #I.biasvar(20,OLS3,np.arange(1,20))
 

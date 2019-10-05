@@ -1,3 +1,7 @@
+import importlib
+import project1 as reloader
+importlib.reload(reloader)
+
 from project1 import Project1, OLS, MSE, OLS2
 from imageio import imread
 import pandas as pd
@@ -5,6 +9,7 @@ import numpy as np
 from Ridge import Ridge, Ridgeskl
 from Lasso import Lasso
 import matplotlib.pyplot as plt
+
 
 def MSE(data,model):
     N = data.size
@@ -39,6 +44,7 @@ class Terrain(Project1):
         df['y'] = y
         self.df = df
         self.changepolydeg(polydeg = deg)
+        self.noexact = True
 
     def plot_terrain(self):
         """
@@ -79,29 +85,42 @@ if __name__ == '__main__':
     terrain = Terrain()
     plt.imshow(terrain_data)
     plt.show()
-    terrain.set_data(terrain_data,deg = (10,10),indices = True)
+    terrain.set_data(terrain_data,deg = (7,7),indices = True)
 
     terrain.plot_terrain()
 
     _lambda = 0.001
-    frac = 0.8
+    frac = 0.2
     R = Ridge(_lambda)
     L = Lasso(_lambda)
-    terrain.fit_frac(R,frac)
-    print("betas = ",terrain.beta)
-    print("MSE = ",MSE(terrain.df['y'],terrain.X@terrain.beta))
+    terrain.frac = frac
+    #from time import time
+    #start = time()
+    # terrain.fit(R)
+    # print(time()-start)
+    # terrain.plot_fit()
+    terrain.cost ="R2"
+    lambds = np.logspace(-9,-1,17)
+    polydegs = np.arange(2,22)
+    R = Ridge
+    terrain.lambda_vs_complexity_error(lambds, polydegs, R, noise = 0)
 
-    terrain.plot_fit()
-    deg = np.arange(3,21)
-    MSE_kfold = np.zeros_like(deg)
-    for i,d in enumerate(deg):
-        print(i)
-        terrain.set_data(terrain_data,deg=(d,d),indices = True)
-        err = terrain.kfolderr(method=OLS3)
-        MSE_kfold[i] = err
-    plt.figure()
-    plt.plot(deg,MSE_kfold)
-    plt.show()
+
+    # terrain.fit_frac(R,frac)
+    # print("betas = ",terrain.beta)
+    # print("MSE = ",MSE(terrain.df['y'],terrain.X@terrain.beta))
+    #
+    # terrain.plot_fit()
+    # deg = np.arange(3,21)
+    # MSE_kfold = np.zeros_like(deg)
+    # for i,d in enumerate(deg):
+    #     print(i)
+    #     terrain.set_data(terrain_data,deg=(d,d),indices = True)
+    #     err = terrain.kfolderr(method=OLS3)
+    #     MSE_kfold[i] = err
+    # plt.figure()
+    # plt.plot(deg,MSE_kfold)
+    # plt.show()
     """
     terrain.fit(OLS3)
 
