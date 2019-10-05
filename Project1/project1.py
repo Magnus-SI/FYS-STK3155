@@ -15,7 +15,6 @@ from Ridge import Ridge, Ridgeskl
 from Lasso import Lasso
 import seaborn as sns
 
-
 def OLS(X,y):
     """
     OLS using our given formulas, note that this as of now does not work with
@@ -38,6 +37,16 @@ def OLS3(X,y):
     """
     beta = np.linalg.pinv(X)@y
     return beta
+
+class OLS3class:
+    def __init__(self,lambd):
+        pass
+    def __call__(self, X,y):
+        """
+        OLS using numpy pinv
+        """
+        beta = np.linalg.pinv(X)@y
+        return beta
 
 def R2(y,y_model):
     """
@@ -246,7 +255,7 @@ class Project1:
             print("Choose from MSE or R2 as a cost function")
             sys.exit(1)
 
-    def lambda_vs_complexity_error(self, lambds, polydegs, regtype, noise, showvals = True):
+    def lambda_vs_complexity_error(self, lambds, polydegs, regtype, noise, showvals = True, new_plot = True):
         """
         Generates a heat map comparing performance of the hyperparamater lambda
         for either Ridge or Lasso, with varying complexity. Checks performance both
@@ -257,6 +266,7 @@ class Project1:
         regtype: Ridge or Lasso
         noise: noise to add to the data
         showvals: True if show values on colors, False if not
+        new_plot: Used to compare multiple methods in the same plot.
         cost function: self.cost determines whether to use R2 or MSE for plotting
 
         Note that train errors and test errors do not use exactly the same training set
@@ -279,9 +289,11 @@ class Project1:
         if len(lambds) == 1:       #only tested for one value of lambda
             TestErrors.reshape(len(polydegs))
             TrainErrors.reshape(len(polydegs))
-            plt.figure()
-            plt.plot(polydegs, TestErrors, label="Test")
-            plt.plot(polydegs, TrainErrors, label="Train")
+
+            if new_plot:
+                plt.figure()
+            plt.plot(polydegs, TestErrors, label="%s: Test"%(regtype.__name__))
+            plt.plot(polydegs, TrainErrors, label="%s: Train"%(regtype.__name__))
             plt.xlabel("Polynomial degree")
             plt.ylabel(self.cost)
             plt.title(r"$\lambda = %g$"%lambds[0])
@@ -492,6 +504,19 @@ class Project1:
 
 if __name__=="__main__":
 
+    def methodsvscomplexity():
+        I = Project1()
+        I.gendat(200, noisefraq=1e-2)
+        lambds = np.array([10**-6])
+        polydegs = np.arange(2,18)
+        I.cost = "MSE"
+        I.frac = 1.0
+        noise = 1e-2
+        for regtype in [OLS3class, Ridge, Lasso]:
+            I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, new_plot=False)
+        plt.yscale("log")
+
+
     def lambdavcomplexityplots():
         I = Project1()
         I.gendat(200, noisefraq=1e-4)
@@ -502,7 +527,7 @@ if __name__=="__main__":
         I.cost = "R2"
         I.frac = 1.0
         #I.compnoisy=False
-        I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise)
+        I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, showvals=True)
         I.cost = "MSE"
         lambd = np.array([10**-5])
         polydegs = np.arange(2,17)

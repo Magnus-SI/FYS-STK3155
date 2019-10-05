@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 class Lasso():
     def __init__(self,lambda_):
         self.lambda_ = lambda_
-        self.clf = Lasso_(alpha = lambda_,fit_intercept = False)
+        self.clf = Lasso_(alpha = lambda_,fit_intercept = False, max_iter = 20000, tol=0.001)
 
     def __call__(self,X,y):
         """
