@@ -94,7 +94,7 @@ class Project1:
         self.compnoisy = True   #evaluate error compared to noisy data
         self.cost = "MSE"       #defines which cost function to use
         self.frac = 1.0         #fraction of the data to use
-        self.noexact = True       #if True, data is loaded and not generated, so no y_exact will exist
+        self.noexact = False       #if True, data is loaded and not generated, so no y_exact will exist
         pass
 
 
@@ -276,6 +276,19 @@ class Project1:
                 TrainErrors[i,j] = self.trainerr(method = regtype(lambd))
 
         #Plotting the data
+        if len(lambds) == 1:       #only tested for one value of lambda
+            TestErrors.reshape(len(polydegs))
+            TrainErrors.reshape(len(polydegs))
+            plt.figure()
+            plt.plot(polydegs, TestErrors, label="Test")
+            plt.plot(polydegs, TrainErrors, label="Train")
+            plt.xlabel("Polynomial degree")
+            plt.ylabel(self.cost)
+            plt.title(r"$\lambda = %g$"%lambds[0])
+            plt.legend()
+            plt.show()
+            return
+
         if self.cost=="R2":
             vmin = 0; vmax = 1
         elif self.cost=="MSE":
@@ -489,6 +502,13 @@ if __name__=="__main__":
     #I.compnoisy=False
     from time import time
     I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise)
+    I.cost = "MSE"
+    lambd = np.array([10**-5])
+    polydegs = np.arange(2,17)
+    I.lambda_vs_complexity_error(lambd, polydegs, regtype, noise)
+    lambd = np.array([10**-3])
+    polydegs = np.arange(2,25)
+    I.lambda_vs_complexity_error(lambd, polydegs, regtype, noise)
 
     #I.gendat(2000, noisefraq=0.001)
     #I.biasvar(20,OLS3,np.arange(1,20))

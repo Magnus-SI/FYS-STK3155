@@ -102,7 +102,7 @@ if __name__ == '__main__':
     terrain.cost ="R2"
     lambds = np.logspace(-9,-1,17)
     polydegs = np.arange(2,22)
-    R = Ridge
+    R = Ridgeskl
     terrain.lambda_vs_complexity_error(lambds, polydegs, R, noise = 0)
 
 
