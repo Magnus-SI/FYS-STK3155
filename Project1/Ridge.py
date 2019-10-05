@@ -2,6 +2,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sklearn.linear_model as skl
 
+def inv_svd(X):
+    """
+    Caclculates the invers of a matrix A using numpys svd function
+    """
+    U, s, VT = np.linalg.svd(X)
+    invD = np.zeros((len(U),len(VT)))
+    for i in range(0,len(VT)):
+        invD[i,i]=1/s[i]
+    UT = np.transpose(U); V = np.transpose(VT)
+    return np.matmul(V,np.matmul(invD,UT))
+
 class Ridge():
     def __init__(self,_lambda):
         """
@@ -19,7 +30,7 @@ class Ridge():
         y : Datapoints
         """
         lmb_matrix = np.identity(X.shape[1])*self._lambda
-        return np.linalg.inv(np.transpose(X)@X+lmb_matrix)@np.transpose(X)@y
+        return inv_svd(np.transpose(X)@X+lmb_matrix)@np.transpose(X)@y
 
 class Ridgeskl(Ridge):
     def __call__(self,X,y):
