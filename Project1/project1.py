@@ -301,6 +301,22 @@ class Project1:
             plt.show()
             return
 
+        if len(polydegs) == 1:       #only tested for one polynomial degree
+            TeE = np.zeros(len(lambds))
+            TrE = np.zeros(len(lambds))
+            TeE[:] = TestErrors[0,:]
+            TrE[:] = TrainErrors[0,:]
+            if new_plot:
+                plt.figure()
+            plt.plot(np.log10(lambds), TeE, label="%s: Test"%(regtype.__name__))
+            plt.plot(np.log10(lambds), TrE, label="%s: Train"%(regtype.__name__))
+            plt.xlabel(r"$log10(\lambda)$")
+            plt.ylabel(self.cost)
+            plt.title("Polynomial degree %i"%polydegs[0])
+            plt.legend()
+            plt.show()
+            return
+
         if self.cost=="R2":
             vmin = 0; vmax = 1
         elif self.cost=="MSE":
@@ -516,6 +532,17 @@ if __name__=="__main__":
             I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, new_plot=False)
         plt.yscale("log")
 
+    def methodsvlambda():
+        P = Project1()
+        P.gendat(200, noisefraq=1e-2)
+        lambds = np.logspace(-13,-1,13)
+        polydegs = np.array([10])
+        P.cost = "MSE"
+        P.frac = 1.0
+        noise = 1e-2
+        for regtype in [OLS3class, Ridge, Lasso]:
+            P.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, new_plot=False)
+        plt.yscale("log")
 
     def lambdavcomplexityplots():
         I = Project1()
