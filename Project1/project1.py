@@ -379,12 +379,13 @@ class Project1:
         self.beta = betopt
         self.X = Xopt
 
+        plt.figure()
         plt.plot(polydegs, MSEs, label="MSE")
         plt.plot(polydegs, biass, label="bias")
         plt.plot(polydegs, variances, label="variance")
-        plt.plot(polydegs, biass+variances+self.sigma**2,'--', label="bias+var")
+        plt.plot(polydegs, biass+variances,'--', label="bias+var")
         plt.legend()
-        #plt.yscale("log")
+        plt.yscale("log")
         plt.xlabel("Degree of polynomial")
         plt.ylabel("Errors")
         plt.show()
@@ -491,24 +492,32 @@ class Project1:
 
 if __name__=="__main__":
 
-    I = Project1()
-    I.gendat(200, noisefraq=1e-4)
-    lambds = np.logspace(-9,-1,17)
-    polydegs = np.arange(2,14)
-    regtype = Ridge
-    noise = 1e-2
-    I.cost = "R2"
-    I.frac = 1.0
-    #I.compnoisy=False
-    from time import time
-    I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise)
-    I.cost = "MSE"
-    lambd = np.array([10**-5])
-    polydegs = np.arange(2,17)
-    I.lambda_vs_complexity_error(lambd, polydegs, regtype, noise)
-    lambd = np.array([10**-3])
-    polydegs = np.arange(2,25)
-    I.lambda_vs_complexity_error(lambd, polydegs, regtype, noise)
+    def lambdavcomplexityplots():
+        I = Project1()
+        I.gendat(200, noisefraq=1e-4)
+        lambds = np.logspace(-9,-1,17)
+        polydegs = np.arange(2,14)
+        regtype = Ridge
+        noise = 1e-2
+        I.cost = "R2"
+        I.frac = 1.0
+        #I.compnoisy=False
+        I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise)
+        I.cost = "MSE"
+        lambd = np.array([10**-5])
+        polydegs = np.arange(2,17)
+        I.lambda_vs_complexity_error(lambd, polydegs, regtype, noise)
+        lambd = np.array([10**-3])
+        polydegs = np.arange(2,25)
+        I.lambda_vs_complexity_error(lambd, polydegs, regtype, noise)
+
+    def biasvarplots(resamps = 50):
+        P = Project1()
+        polydegs = np.arange(2,25)
+        P.gendat(5000, noisefraq=1e-2)
+        P.biasvar(resamps,OLS3,polydegs)        #vs noisy data
+        P.compnoisy=False
+        P.biasvar(resamps,OLS3,polydegs)        #vs actual data
 
     #I.gendat(2000, noisefraq=0.001)
     #I.biasvar(20,OLS3,np.arange(1,20))
