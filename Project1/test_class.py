@@ -3,6 +3,7 @@ import pytest
 from Ridge import inv_svd, Ridge
 from project1 import OLS
 from terrain import OLS3
+from Lasso import Lasso
 
 class TestClass():
     def test_inv_svd(self):
@@ -47,7 +48,7 @@ class TestClass():
         tol = 1e-14
         assert np.all(np.abs(betas_calculated-betas_precalculated)<tol)
 
-    def test_Ridge(self):
+    def test_Ridge_lambda0(self):
         """
         Test that ridge gives correct answers within a tolerance when lambda=0
         Tests a first order polynomial case  with exact answer calulated
@@ -58,5 +59,19 @@ class TestClass():
         betas_precalculated = np.array([1/3., 79./57])
         X = np.polynomial.polynomial.polyvander(x,1)
         betas_calculated = R(X,y)
+        tol = 1e-14
+        assert np.all(np.abs(betas_calculated-betas_precalculated)<tol)
+
+    def test_Lasso_lambda0(self):
+        """
+        Test that LASSO gives correct answers within a tolerance when lambda=0
+        Tests a first order polynomial case  with exact answer calulated
+        """
+        L = Lasso(1e-15,max_iter=500000,tol = 1e-5)
+        x = np.array([1,2,4,5,7])
+        y = np.array([2,3,7,5,11])
+        betas_precalculated = np.array([1/3., 79./57])
+        X = np.polynomial.polynomial.polyvander(x,1)
+        betas_calculated = L(X,y)
         tol = 1e-14
         assert np.all(np.abs(betas_calculated-betas_precalculated)<tol)

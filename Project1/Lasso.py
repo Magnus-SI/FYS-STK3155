@@ -3,9 +3,9 @@ from sklearn.linear_model import Lasso as Lasso_
 import matplotlib.pyplot as plt
 
 class Lasso():
-    def __init__(self,lambda_):
+    def __init__(self,lambda_,max_iter = 20000, tol = 1e-5):
         self.lambda_ = lambda_
-        self.clf = Lasso_(alpha = lambda_,fit_intercept = False, max_iter = 20000, tol=0.001)
+        self.clf = Lasso_(alpha = lambda_,fit_intercept = False, max_iter = max_iter, tol=tol)
 
     def __call__(self,X,y):
         """
