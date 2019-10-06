@@ -146,6 +146,8 @@ class Project1:
     def changenoise(self, noisefraq):
         """
         Changes the noise of the current data
+        noisefraq: standard deviation of noise as a fraction of difference between
+        maximum and minimum value
         """
         if self.noexact:
             return          #y_exact does not exist, prevents error
@@ -207,6 +209,7 @@ class Project1:
     def trainerr(self, method):
         """
         Trains on, and evalutes error on the whole data set
+        method: method of fitting, either a function or initialized class
         """
         df = self.df.sample(frac = self.frac)
         self.fit(method, df)
@@ -296,7 +299,7 @@ class Project1:
             plt.plot(polydegs, TrainErrors, label="%s: Train"%(regtype.__name__))
             plt.xlabel("Polynomial degree")
             plt.ylabel(self.cost)
-            plt.title(r"$\lambda = %g$"%lambds[0])
+            plt.title(r"$\lambda = %g$, $\hat{\sigma} = %.1e$"%(lambds[0], noise))
             plt.legend()
             plt.show()
             return
@@ -312,7 +315,7 @@ class Project1:
             plt.plot(np.log10(lambds), TrE, label="%s: Train"%(regtype.__name__))
             plt.xlabel(r"$log10(\lambda)$")
             plt.ylabel(self.cost)
-            plt.title("Polynomial degree %i"%polydegs[0])
+            plt.title(r"Polynomial degree %i, $\hat{\sigma} = %.1e$"%(polydegs[0], noise))
             plt.legend()
             plt.show()
             return
@@ -330,36 +333,13 @@ class Project1:
         h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',ax=ax1,xticklabels=np.log10(lambds), yticklabels=polydegs, vmin = vmin, vmax = vmax)
         ax1.set_xlabel(r'$log10(\lambda)$')
         ax1.set_ylabel('Polynomial degree')
-        ax1.set_title('Test Error')
+        ax1.set_title(r'Test Error, $\hat{\sigma} = %.1e$'%noise)
         h2=sns.heatmap(data=TrainErrors,annot=showvals,cmap='viridis',ax=ax2,xticklabels=np.log10(lambds), yticklabels=polydegs, vmin = vmin, vmax = vmax)
         ax2.set_xlabel(r'$log10(\lambda)$')
         ax2.set_ylabel('Polynomial degree')
-        ax2.set_title('Train Error')
+        ax2.set_title(r'Train Error, $\hat{\sigma} = %.1e$'%noise)
         plt.show()
         #return TestErrors, TrainErrors
-
-
-    def MSEvlambda(self, lambds, method=Ridge(0), polydeg=(5,5), noises = np.logspace(-4,-2,2), avgnum=3):
-        fig = plt.figure()
-        plt.xlabel("Polynomial degree")
-        plt.ylabel("Error")
-        ax = fig.add_subplot(1,1,1)
-        MSEs = np.zeros(len(lambds))
-        self.gendat(self.N, noisefraq = noises[0], deg = polydeg)
-        for noise in noises:
-            for i,lambd in enumerate(lambds):
-                method.lambda_ = lambd
-                for j in range(avgnum):
-                    self.changenoise(noise)
-                    MSEs[i]+= self.kfolderr(method=method)
-                MSEs[i] *= 1/avgnum
-            plt.plot(lambds,MSEs, label="noise: %g" %noise)
-            plt.xlabel("lambda")
-            plt.ylabel("MSE")
-            plt.xscale("log")
-            plt.yscale("log")
-        plt.legend()
-        plt.show()
 
     def degvnoiseerr(self, method, degs, noises, new_plot = True):
         """
@@ -386,6 +366,13 @@ class Project1:
         plt.show()
 
     def biasvar(self,K, model, polydegs):
+        """
+        Evaluates bias and variance for different polynomial degrees,
+        using bootstrap to resample.
+        K: Number of samples
+        model: model to fit
+        polydegs: array of polynomial degrees to compare.
+        """
         split = int(0.8*self.N)
         MSEs = np.zeros(len(polydegs))
         biass = np.zeros(len(polydegs))
@@ -425,7 +412,7 @@ class Project1:
         if self.cost=="MSE":
             plt.yscale("log")
         plt.xlabel("Degree of polynomial")
-        plt.ylabel("Errors")
+        plt.ylabel(self.cost)
         plt.show()
 
     def Bootstrap(self,K,model):
@@ -453,39 +440,6 @@ class Project1:
         sigma_beta = np.sqrt(sigma_beta_sqr)
         print(sigma_beta.shape)
         return sigma_beta
-
-    def ErrorAnalysis(self, poldeg=(4,4), noises=np.logspace(-2,2,5)):
-        """
-        WARNING: currently outdated, but should still work, use degvnoiseerr instead
-
-        Some basic example of error analysis that compares the MSE error as
-        it changes due to noise, and how this is different when comparing
-        to noisy, or not noisy data.
-        """
-
-        noises = np.array(noises)
-        fig = plt.figure()
-        ax = fig.add_subplot(1,1,1)
-        MSEregs = np.zeros(len(noises))
-        MSEacts = np.zeros(len(noises))
-        for i, noise in enumerate(noises):
-            self.gendat(self.N, noisefraq=noise, deg=poldeg)
-            self.compnoisy=True
-            MSEregs[i] = self.kfolderr(method = OLS2)
-            self.compnoisy=False
-            MSEacts[i] = self.kfolderr(method = OLS2)
-
-        ax.plot(noises,MSEregs,label = "Compared to noisy data")
-        ax.plot(noises,MSEacts,label = "Compared to actual data")
-        plt.xscale("log")
-        plt.yscale("log")
-        plt.ylabel("MSE")
-        plt.xlabel("sigma/max(y)")
-        plt.title(poldeg)
-        plt.legend()
-        plt.show()
-        return MSEregs,MSEacts
-
 
     def plot3D(self,usenoisy=True,approx=False):
         """
@@ -584,12 +538,18 @@ if __name__=="__main__":
         I.lambda_vs_complexity_error(lambd, polydegs, regtype, noise)
 
     def biasvarplots(resamps = 50):
+        """
+        Plots bias vs. variance
+        """
         P = Project1()
+        method = OLS3#Ridge(1e-10)    #OLS3
         polydegs = np.arange(2,25)
         P.gendat(5000, noisefraq=1e-2)
-        P.biasvar(resamps,OLS3,polydegs)        #vs noisy data
+        P.biasvar(resamps,method,polydegs)        #vs noisy data
+        plt.title(r"$\hat{\sigma} = 1e-2$, Ridge(1e-10) vs. noisy, 5000 datapoints")
         P.compnoisy=False
-        P.biasvar(resamps,OLS3,polydegs)        #vs actual data
+        P.biasvar(resamps,method,polydegs)        #vs actual data
+        plt.title(r"$\hat{\sigma} = 1e-2$, Ridge(1e-10) vs. actual, 5000 datapoints")
 
     #I.gendat(2000, noisefraq=0.001)
     #I.biasvar(20,OLS3,np.arange(1,20))
