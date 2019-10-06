@@ -6,6 +6,7 @@ class Lasso():
     def __init__(self,lambda_,max_iter = 20000, tol = 1e-5):
         self.lambda_ = lambda_
         self.clf = Lasso_(alpha = lambda_,fit_intercept = False, max_iter = max_iter, tol=tol)
+        self.__name__ = "Lasso"
 
     def __call__(self,X,y):
         """

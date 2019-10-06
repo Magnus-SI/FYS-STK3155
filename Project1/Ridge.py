@@ -20,6 +20,7 @@ class Ridge():
         _lambda : Hyperparameter
         """
         self._lambda = _lambda
+        self.__name__ = "Ridge"
 
     def __call__(self,X,y):
         """

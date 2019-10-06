@@ -319,6 +319,10 @@ class Project1:
 
         if self.cost=="R2":
             vmin = 0; vmax = 1
+            optarg = np.argmax(TestErrors)
+            optdeg = optarg//len(lambds)
+            optlambd = optarg%len(lambds)
+            print("Best R2: %.4f\nOptimal degree: %i\nOptimal lambda: %g"%(TestErrors[optdeg, optlambd], polydegs[optdeg], lambds[optlambd]))
         elif self.cost=="MSE":
             vmin = False; vmax = False
         f, axs = plt.subplots(2,1, figsize=(12,12))
@@ -357,21 +361,26 @@ class Project1:
         plt.legend()
         plt.show()
 
-    def degvnoiseerr(self,degs=np.arange(1,7),noises=np.logspace(-4,2,10)):
+    def degvnoiseerr(self, method, degs, noises, new_plot = True):
         """
-        Compares MSEs of different degree polynomial fits, when exposed to different noises
+        Compares error
+        method: OLS/Ridge/Lasso, initialized with lambda
+        degs: polynomial degrees to test for
+        noises: noises to test fore
         """
-        fig=plt.figure()
-        ax=fig.add_subplot(1,1,1)
+        if new_plot:
+            fig=plt.figure()
+            ax=fig.add_subplot(1,1,1)
         for deg in degs:
-            MSEs = np.zeros(len(noises))
+            self.changepolydeg((deg, deg))
+            costs = np.zeros(len(noises))
             for i,noise in enumerate(noises):
-                self.gendat(self.N, noisefraq=noise, deg = (deg, deg))      #generate data
-                MSEs[i]=self.kfolderr(method=OLS2)                          #evaluate k-fold error
-            plt.plot(noises,MSEs, label="polydeg: %i"%deg)                  #plot error vs noise
-        plt.xlabel("sigma noise fraction")
-        plt.ylabel("MSE")
-        plt.xscale("log")
+                self.changenoise(noise)
+                costs[i]=self.kfolderr(method=method)                          #evaluate k-fold error
+            plt.plot(np.log10(noises),costs, label="%s: degree %i"%(method.__name__, deg))                  #plot error vs noise
+        plt.xlabel(r"$log10(\sigma)$")
+        plt.ylabel(self.cost)
+        #plt.xscale("log")
         plt.yscale("log")
         plt.legend()
         plt.show()
@@ -413,7 +422,8 @@ class Project1:
         plt.plot(polydegs, variances, label="variance")
         plt.plot(polydegs, biass+variances,'--', label="bias+var")
         plt.legend()
-        plt.yscale("log")
+        if self.cost=="MSE":
+            plt.yscale("log")
         plt.xlabel("Degree of polynomial")
         plt.ylabel("Errors")
         plt.show()
@@ -520,6 +530,16 @@ class Project1:
 
 if __name__=="__main__":
 
+    def methodsvsnoise(lambd = 1e-4):
+        plt.close()
+        P = Project1()
+        P.gendat(500, noisefraq=1e-2)
+        degs = np.arange(5,7)
+        noises = np.logspace(-6,2,25)
+        methods = (OLS3, Ridge(lambd))       #could also add Lasso, but takes a while.
+        for method in methods:
+            P.degvnoiseerr(method, degs, noises, new_plot=False)
+
     def methodsvscomplexity():
         I = Project1()
         I.gendat(200, noisefraq=1e-2)
@@ -546,14 +566,14 @@ if __name__=="__main__":
 
     def lambdavcomplexityplots():
         I = Project1()
-        I.gendat(200, noisefraq=1e-4)
-        lambds = np.logspace(-9,-1,17)
-        polydegs = np.arange(2,14)
+        I.gendat(400, noisefraq=1e-1)
+        lambds = np.logspace(-10,-1,19)
+        polydegs = np.arange(2,22)
         regtype = Ridge
-        noise = 1e-2
+        noise = 1e-1
         I.cost = "R2"
         I.frac = 1.0
-        #I.compnoisy=False
+        I.compnoisy=False
         I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, showvals=True)
         I.cost = "MSE"
         lambd = np.array([10**-5])
