@@ -302,7 +302,7 @@ class Project1:
             plt.ylabel(self.cost)
             plt.title(r"$\lambda = %g$, $\hat{\sigma} = %.1e$"%(lambds[0], noise))
             plt.legend()
-            plt.savefig("test_lambs.pdf")
+            #plt.savefig("test_lambs.pdf")
             plt.show()
             return
 
@@ -319,7 +319,7 @@ class Project1:
             plt.ylabel(self.cost)
             plt.title(r"Polynomial degree %i, $\hat{\sigma} = %.1e$"%(polydegs[0], noise))
             plt.legend()
-            plt.savefig("test_polydegs.pdf")
+            #plt.savefig("test_polydegs.pdf")
             plt.show()
             return
 
