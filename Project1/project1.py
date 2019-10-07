@@ -348,7 +348,7 @@ class Project1:
             plt.title('Terrain %s for %s'%(self.cost, regtype.__name__))
             if saveplot:
                 print("was here")
-                plt.savefig("Terrainfigs/%s%icompn%s.png"%(regtype.__name__, int(self.N*self.frac), self.compnoisy))
+                plt.savefig("Terrainfigs/%s_%i_compn%s.png"%(regtype.__name__, int(self.N*self.frac), self.compnoisy))
                 plt.close()
             else:
                 plt.show()
@@ -366,7 +366,7 @@ class Project1:
         ax2.set_ylabel('Polynomial degree')
         ax2.set_title(r'%s Train Error, $\hat{\sigma} = %.1e$'%(regtype.__name__, noise))
         if saveplot:
-            plt.savefig("Frankefigs/%s%.1f%icompn%s.png"%(regtype.__name__, np.log10(noise), int(self.N*self.frac), self.compnoisy))
+            plt.savefig("Frankefigs/%s_%.1f_%i_compn%s.png"%(regtype.__name__, np.log10(noise), int(self.N*self.frac), self.compnoisy))
             plt.close()
         else:
             plt.show()
