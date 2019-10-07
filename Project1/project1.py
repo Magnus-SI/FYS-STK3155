@@ -40,7 +40,7 @@ def OLS3(X,y):
 
 class OLS3class:
     def __init__(self,lambd):
-        pass
+        self.__name__ = "OLS"
     def __call__(self, X,y):
         """
         OLS using numpy pinv
@@ -557,7 +557,7 @@ if __name__=="__main__":
         I.cost = "MSE"
         I.frac = 1.0
         I.compnoisy = False
-        for regtype, color in zip([OLS3class, Ridge, Lasso], ["#cc1111", "#11cc11", "1111cc"]):
+        for regtype, color in zip([OLS3class, Ridge, Lasso], ["#cc1111", "#11cc11", "#1111cc"]):
             I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, new_plot=False, color = color)
 
         plt.yscale("log")
@@ -611,14 +611,15 @@ if __name__=="__main__":
         Plots bias vs. variance
         """
         P = Project1()
-        method = OLS3#Ridge(1e-10)    #OLS3
-        polydegs = np.arange(2,25)
-        P.gendat(5000, noisefraq=1e-2)
+        lambd = 1e-5
+        method = Ridge(lambd)#OLS3#Ridge(lambd)    #OLS3
+        polydegs = np.arange(2,30)
+        P.gendat(1000, noisefraq=1e-2)
         P.biasvar(resamps,method,polydegs)        #vs noisy data
-        plt.title(r"$\hat{\sigma} = 1e-2$, Ridge(1e-10) vs. noisy, 5000 datapoints")
+        plt.title(r"$\hat{\sigma} = 1e-2$, Ridge(1e-5) vs. noisy, 1000 datapoints")
         P.compnoisy=False
         P.biasvar(resamps,method,polydegs)        #vs actual data
-        plt.title(r"$\hat{\sigma} = 1e-2$, Ridge(1e-10) vs. actual, 5000 datapoints")
+        plt.title(r"$\hat{\sigma} = 1e-2$, Ridge(1e-5) vs. actual, 1000 datapoints")
 
     #I.gendat(2000, noisefraq=0.001)
     #I.biasvar(20,OLS3,np.arange(1,20))
