@@ -100,7 +100,7 @@ if __name__ == '__main__':
         lambds = np.logspace(-11,-1,11)
         polydegs = np.arange(2,8)
         R = Ridge
-        optdeg, optlambd, optR2 = T.lambda_vs_complexity_error(lambds, polydegs, method, noise = 0, terrain=True, saveplot = saveplot)
+        optdeg, optlambd, optR2, optMSE = T.lambda_vs_complexity_error(lambds, polydegs, method, noise = 0, terrain=True, saveplot = saveplot)
         T.changepolydeg((optdeg, optdeg))
         Mlambd = method(optlambd)
         T.fit(method(optlambd))     #optimal fit

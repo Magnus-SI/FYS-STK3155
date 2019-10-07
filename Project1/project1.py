@@ -328,14 +328,20 @@ class Project1:
         if self.cost=="R2":
             vmin = 0.7; vmax = 1
             optarg = np.argmax(TestErrors)
-            optdeg = optarg//len(lambds)
-            optlambd = optarg%len(lambds)
-            optR2 = TestErrors[optdeg, optlambd]
-            print("Best R2: %.4f\nOptimal degree: %i\nOptimal log10(lambda): %g"%(TestErrors[optdeg, optlambd], polydegs[optdeg], np.log10(lambds[optlambd])))
+            optdegind = optarg//len(lambds)
+            optlambdind = optarg%len(lambds)
+            optdeg = polydegs[optdegind]
+            optlambd = lambds[optlambdind]
+            optR2 = TestErrors[optdegind, optlambdind]
+            self.cost = "MSE"
+            self.changepolydeg((optdeg, optdeg))
+            optMSE = self.kfolderr(ks = np.arange(2,6), method = regtype(optlambd))
+            self.cost = "R2"
+            print("Best R2: %.4f\nCorresponding MSE: %.2e\nOptimal degree: %i\nOptimal log10(lambda): %g"%(optR2, optMSE, optdeg, np.log10(optlambd)))
             if terrain:
-                self.save_results_latex(filename = "terrain%s.txt"%(regtype.__name__), results = [int(self.N*self.frac), optR2, polydegs[optdeg], np.log10(lambds[optlambd])], format_types = ['%i', '%.4f', '%i', '%.1f'])
+                self.save_results_latex(filename = "terrain%s.txt"%(regtype.__name__), results = [int(self.N*self.frac), optR2, optMSE, optdeg, np.log10(optlambd)], format_types = ['%i', '%.4f', '%.3e', '%i', '%.1f'])
             else:
-                self.save_results_latex(filename = "franke%scompn%s.txt"%(regtype.__name__, self.compnoisy), results = [np.log10(noise), int(self.N*self.frac), optR2, polydegs[optdeg], np.log10(lambds[optlambd])], format_types = ['%.1f', '%i', '%.4f', '%i', '%.1f'])
+                self.save_results_latex(filename = "franke%scompn%s.txt"%(regtype.__name__, self.compnoisy), results = [np.log10(noise), int(self.N*self.frac), optR2, optMSE, optdeg, np.log10(optlambd)], format_types = ['%.1f', '%i', '%.4f', '%.32', '%i', '%.1f'])
 
         elif self.cost=="MSE":
             vmin = False; vmax = False
@@ -353,7 +359,7 @@ class Project1:
             else:
                 plt.show()
             if self.cost == "R2":
-                return optdeg, optlambd, optR2
+                return optdeg, optlambd, optR2, optMSE
 
         f, axs = plt.subplots(2,1, figsize=(12,12))
         ax1, ax2 = axs
