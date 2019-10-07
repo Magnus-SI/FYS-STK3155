@@ -302,6 +302,7 @@ class Project1:
             plt.ylabel(self.cost)
             plt.title(r"$\lambda = %g$, $\hat{\sigma} = %.1e$"%(lambds[0], noise))
             plt.legend()
+            plt.savefig("test_lambs.pdf")
             plt.show()
             return
 
@@ -314,10 +315,11 @@ class Project1:
                 plt.figure()
             plt.plot(np.log10(lambds), TeE, label="%s: Test"%(regtype.__name__))
             plt.plot(np.log10(lambds), TrE, label="%s: Train"%(regtype.__name__))
-            plt.xlabel(r"$log10(\lambda)$")
+            plt.xlabel(r"$log_{10}(\lambda)$")
             plt.ylabel(self.cost)
             plt.title(r"Polynomial degree %i, $\hat{\sigma} = %.1e$"%(polydegs[0], noise))
             plt.legend()
+            plt.savefig("test_polydegs.pdf")
             plt.show()
             return
 
@@ -333,7 +335,7 @@ class Project1:
         if terrain:
             plt.figure()
             sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',xticklabels=np.log10(lambds), yticklabels=polydegs, vmin = vmin, vmax = vmax)
-            plt.xlabel(r'$log10(\lambda)$')
+            plt.xlabel(r'$log_{10}(\lambda)$')
             plt.ylabel('Polynomial degree')
             plt.title('Terrain %s for %s'%(self.cost, regtype.__name__))
             plt.show()
@@ -341,12 +343,12 @@ class Project1:
                 return optdeg, optlambd, optR2
         f, axs = plt.subplots(2,1, figsize=(12,12))
         ax1, ax2 = axs
-        h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',ax=ax1,xticklabels=np.around(np.log10(lambds), 1), yticklabels=polydegs, vmin = vmin, vmax = vmax)
-        ax1.set_xlabel(r'$log10(\lambda)$')
+        h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='cubehelix',ax=ax1,xticklabels=np.around(np.log10(lambds), 1), yticklabels=polydegs, vmin = vmin, vmax = vmax)
+        ax1.set_xlabel(r'$log_{10}(\lambda)$')
         ax1.set_ylabel('Polynomial degree')
         ax1.set_title(r'%s Test Error, $\hat{\sigma} = %.1e$'%(regtype.__name__, noise))
-        h2=sns.heatmap(data=TrainErrors,annot=showvals,cmap='viridis',ax=ax2,xticklabels=np.around(np.log10(lambds), 1), yticklabels=polydegs, vmin = vmin, vmax = vmax)
-        ax2.set_xlabel(r'$log10(\lambda)$')
+        h2=sns.heatmap(data=TrainErrors,annot=showvals,cmap='cubehelix',ax=ax2,xticklabels=np.around(np.log10(lambds), 1), yticklabels=polydegs, vmin = vmin, vmax = vmax)
+        ax2.set_xlabel(r'$log_{10}(\lambda)$')
         ax2.set_ylabel('Polynomial degree')
         ax2.set_title(r'%s Train Error, $\hat{\sigma} = %.1e$'%(regtype.__name__, noise))
         plt.show()
@@ -369,7 +371,7 @@ class Project1:
                 self.changenoise(noise)
                 costs[i]=self.kfolderr(method=method)                          #evaluate k-fold error
             plt.plot(np.log10(noises),costs, label="%s: degree %i"%(method.__name__, deg))                  #plot error vs noise
-        plt.xlabel(r"$log10(\sigma)$")
+        plt.xlabel(r"$log_{10}(\sigma)$")
         plt.ylabel(self.cost)
         #plt.xscale("log")
         plt.yscale("log")
@@ -532,8 +534,8 @@ if __name__=="__main__":
     def lambdavcomplexityplots():
         I = Project1()
         I.gendat(400, noisefraq=1e-1)
-        lambds = np.logspace(-11,-1,21)
-        polydegs = np.arange(2,22)
+        lambds = np.logspace(-11,-1,11)
+        polydegs = np.arange(2,12)
         regtype = Ridge
         noise = 1e-1
         I.cost = "R2"
@@ -561,7 +563,7 @@ if __name__=="__main__":
         P.compnoisy=False
         P.biasvar(resamps,method,polydegs)        #vs actual data
         plt.title(r"$\hat{\sigma} = 1e-2$, Ridge(1e-10) vs. actual, 5000 datapoints")
-
+    lambdavcomplexityplots()
     #I.gendat(2000, noisefraq=0.001)
     #I.biasvar(20,OLS3,np.arange(1,20))
 
