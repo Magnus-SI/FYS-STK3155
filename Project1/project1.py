@@ -258,7 +258,7 @@ class Project1:
             print("Choose from MSE or R2 as a cost function")
             sys.exit(1)
 
-    def lambda_vs_complexity_error(self, lambds, polydegs, regtype, noise, showvals = True, new_plot = True, terrain=False):
+    def lambda_vs_complexity_error(self, lambds, polydegs, regtype, noise, showvals = True, new_plot = True, terrain=False, color = "#142cb1"):
         """
         Generates a heat map comparing performance of the hyperparamater lambda
         for either Ridge or Lasso, with varying complexity. Checks performance both
@@ -271,6 +271,7 @@ class Project1:
         showvals: True if show values on colors, False if not
         new_plot: Used to compare multiple methods in the same plot.
         terrain: If True, do not plot training data, and do not use sigma in title
+        color: color of the current line plot, not useful for 2d color plots.
         cost function: self.cost determines whether to use R2 or MSE for plotting
 
         Note that train errors and test errors do not use exactly the same training set
@@ -296,11 +297,11 @@ class Project1:
 
             if new_plot:
                 plt.figure()
-            plt.plot(polydegs, TestErrors, label="%s: Test"%(regtype.__name__))
-            plt.plot(polydegs, TrainErrors, label="%s: Train"%(regtype.__name__))
+            plt.plot(polydegs, TestErrors, '%s'%color,  label="%s: Test"%(regtype.__name__))
+            plt.plot(polydegs, TrainErrors, '%s'%color, linestyle='dashed', label="%s: Train"%(regtype.__name__))
             plt.xlabel("Polynomial degree")
             plt.ylabel(self.cost)
-            plt.title(r"$\lambda = %g$, $\hat{\sigma} = %.1e$"%(lambds[0], noise))
+            plt.title(r"$\lambda = %g$, $\hat{\sigma} = %.1e$, %s datapoints"%(lambds[0], noise, self.N))
             plt.legend()
             #plt.savefig("test_lambs.pdf")
             plt.show()
@@ -313,11 +314,11 @@ class Project1:
             TrE[:] = TrainErrors[0,:]
             if new_plot:
                 plt.figure()
-            plt.plot(np.log10(lambds), TeE, label="%s: Test"%(regtype.__name__))
-            plt.plot(np.log10(lambds), TrE, label="%s: Train"%(regtype.__name__))
+            plt.plot(np.log10(lambds), TeE, '%s'%color, label="%s: Test"%(regtype.__name__))
+            plt.plot(np.log10(lambds), TrE, '%s'%color, linestyle='dashed', label="%s: Train"%(regtype.__name__))
             plt.xlabel(r"$log_{10}(\lambda)$")
             plt.ylabel(self.cost)
-            plt.title(r"Polynomial degree %i, $\hat{\sigma} = %.1e$"%(polydegs[0], noise))
+            plt.title(r"Polynomial degree %i, $\hat{\sigma} = %.1e$, %s datapoints"%(polydegs[0], noise, self.N))
             plt.legend()
             #plt.savefig("test_polydegs.pdf")
             plt.show()
@@ -343,11 +344,11 @@ class Project1:
                 return optdeg, optlambd, optR2
         f, axs = plt.subplots(2,1, figsize=(12,12))
         ax1, ax2 = axs
-        h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='cubehelix',ax=ax1,xticklabels=np.around(np.log10(lambds), 1), yticklabels=polydegs, vmin = vmin, vmax = vmax)
+        h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',ax=ax1,xticklabels=np.around(np.log10(lambds), 1), yticklabels=polydegs, vmin = vmin, vmax = vmax)
         ax1.set_xlabel(r'$log_{10}(\lambda)$')
         ax1.set_ylabel('Polynomial degree')
         ax1.set_title(r'%s Test Error, $\hat{\sigma} = %.1e$'%(regtype.__name__, noise))
-        h2=sns.heatmap(data=TrainErrors,annot=showvals,cmap='cubehelix',ax=ax2,xticklabels=np.around(np.log10(lambds), 1), yticklabels=polydegs, vmin = vmin, vmax = vmax)
+        h2=sns.heatmap(data=TrainErrors,annot=showvals,cmap='viridis',ax=ax2,xticklabels=np.around(np.log10(lambds), 1), yticklabels=polydegs, vmin = vmin, vmax = vmax)
         ax2.set_xlabel(r'$log_{10}(\lambda)$')
         ax2.set_ylabel('Polynomial degree')
         ax2.set_title(r'%s Train Error, $\hat{\sigma} = %.1e$'%(regtype.__name__, noise))
@@ -533,8 +534,8 @@ if __name__=="__main__":
         I.cost = "MSE"
         I.frac = 1.0
         noise = 1e-2
-        for regtype in [OLS3class, Ridge, Lasso]:
-            I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, new_plot=False)
+        for regtype, color in zip([OLS3class, Ridge, Lasso], ["#cc1111", "#11cc11", "#1111cc"]):
+            I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, new_plot=False, color = color)
         plt.yscale("log")
 
     def methodsvlambda():
