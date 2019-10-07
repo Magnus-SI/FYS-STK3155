@@ -101,9 +101,9 @@ if __name__ == '__main__':
     # terrain.plot_fit()
     terrain.cost ="R2"
     lambds = np.logspace(-9,-1,17)
-    polydegs = np.arange(2,22)
+    polydegs = np.arange(2,4)
     R = Ridge
-    terrain.lambda_vs_complexity_error(lambds, polydegs, R, noise = 0)
+    terrain.lambda_vs_complexity_error(lambds, polydegs, R, noise = 0, terrain=True)
 
 
     # terrain.fit_frac(R,frac)
