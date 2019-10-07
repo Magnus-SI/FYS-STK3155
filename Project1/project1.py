@@ -514,7 +514,7 @@ class Project1:
         for i,number in enumerate(results):
             string += "%s&"%(format_types[i])%(number)
         string = string[:-1]
-        string += "\\\ \n"
+        string += "\\\ \n \hline \\\ \n"
         file.write(string)
         file.close()
 
