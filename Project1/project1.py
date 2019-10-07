@@ -549,17 +549,31 @@ if __name__=="__main__":
         for method in methods:
             P.degvnoiseerr(method, degs, noises, new_plot=False)
 
-    def methodsvscomplexity():
+    def methodsvscomplexity(lambd = 1e-6, N=200, noise = 1e-2, savefigs = False):
         I = Project1()
-        I.gendat(200, noisefraq=1e-2)
-        lambds = np.array([10**-6])
+        I.gendat(N, noisefraq=1e-2)
+        lambds = np.array([lambd])
         polydegs = np.arange(2,18)
         I.cost = "MSE"
         I.frac = 1.0
-        noise = 1e-2
-        for regtype, color in zip([OLS3class, Ridge, Lasso], ["#cc1111", "#11cc11", "#1111cc"]):
+        I.compnoisy = False
+        for regtype, color in zip([OLS3class, Ridge, Lasso], ["#cc1111", "#11cc11", "1111cc"]):
             I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, new_plot=False, color = color)
+
         plt.yscale("log")
+        if savefigs:
+            plt.ylim(top=1e3, bottom = 1e-6)
+            plt.savefig("biasvar/ORL_%i_%.1f_%.1f_compn%s.png"%(int(I.N*I.frac), np.log10(lambds[0]), np.log10(noise), I.compnoisy))
+            plt.close()
+
+    def multiOLSRidge():
+        lambds = np.array([1e-5])#np.logspace(-8,-4, 5)
+        noises = np.array([1e-1])#np.logspace(-3,-1, 3)
+        dpoints = np.array([100, 200, 500, 1000, 2000, 3000])#dpoints = np.array([100, 200, 500, 1000, 2000, 3000])
+        for lambd in lambds:
+            for noise in noises:
+                for N in dpoints:
+                    methodsvscomplexity(lambd, N, noise, savefigs = True)
 
     def methodsvlambda():
         P = Project1()
