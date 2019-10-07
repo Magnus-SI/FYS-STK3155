@@ -35,6 +35,7 @@ class Terrain(Project1):
             x2 = x2[0:300, 300:500]
             data = data[0:300, 300:500]
             self.Nx, self.Ny = data.shape
+            self.N = data.size
         x1 = x1.flatten()
         x2 = x2.flatten()
         y = data.flatten()
@@ -94,7 +95,6 @@ if __name__ == '__main__':
         T = Terrain()
         T.set_data(terrain_data, deg = (5,5), indices = True)
         T.plot_terrain()
-        frac = 0.2
         T.frac = frac
         T.cost ="R2"
         lambds = np.logspace(-11,-1,11)
@@ -110,7 +110,6 @@ if __name__ == '__main__':
         which in turn can be read by latex. Different sets of values would correspond to
         OLS vs. Lasso vs. Ridge methods, along with different fractions of data and similar.
         """
-
 
     # terrain.fit_frac(R,frac)
     # print("betas = ",terrain.beta)

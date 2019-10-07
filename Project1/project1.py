@@ -328,7 +328,13 @@ class Project1:
             optarg = np.argmax(TestErrors)
             optdeg = optarg//len(lambds)
             optlambd = optarg%len(lambds)
+            optR2 = TestErrors[optdeg, optlambd]
             print("Best R2: %.4f\nOptimal degree: %i\nOptimal log10(lambda): %g"%(TestErrors[optdeg, optlambd], polydegs[optdeg], np.log10(lambds[optlambd])))
+            if terrain:
+                self.save_results_latex(filename = "terrain.txt", results = [int(self.N*self.frac), optR2, polydegs[optdeg], np.log10(lambds[optlambd])], format_types = ['%i', '%.4f', '%i', '%.1f'])
+            else:
+                self.save_results_latex(filename = "franke.txt", results = [np.log10(noise), int(self.N*self.frac), optR2, polydegs[optdeg], np.log10(lambds[optlambd])], format_types = ['%.1f', '%i', '%.4f', '%i', '%.1f'])
+
         elif self.cost=="MSE":
             vmin = False; vmax = False
 
@@ -581,7 +587,7 @@ if __name__=="__main__":
         P.compnoisy=False
         P.biasvar(resamps,method,polydegs)        #vs actual data
         plt.title(r"$\hat{\sigma} = 1e-2$, Ridge(1e-10) vs. actual, 5000 datapoints")
-        
+
     #I.gendat(2000, noisefraq=0.001)
     #I.biasvar(20,OLS3,np.arange(1,20))
 
