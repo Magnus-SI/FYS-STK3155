@@ -341,7 +341,7 @@ class Project1:
             if terrain:
                 self.save_results_latex(filename = "terrain%s.txt"%(regtype.__name__), results = [int(self.N*self.frac), optR2, np.sqrt(optMSE), optdeg, np.log10(optlambd)], format_types = ['%i', '%.4f', '%.3e', '%i', '%.1f'])
             else:
-                self.save_results_latex(filename = "franke%scompn%s.txt"%(regtype.__name__, self.compnoisy), results = [np.log10(noise), int(self.N*self.frac), optR2, np.sqrt(optMSE), optdeg, np.log10(optlambd)], format_types = ['%.1f', '%i', '%.4f', '%.32', '%i', '%.1f'])
+                self.save_results_latex(filename = "franke%scompn%s.txt"%(regtype.__name__, self.compnoisy), results = [np.log10(noise), int(self.N*self.frac), optR2, np.sqrt(optMSE), optdeg, np.log10(optlambd)], format_types = ['%.1f', '%i', '%.4f', '%.3e', '%i', '%.1f'])
 
         elif self.cost=="MSE":
             vmin = False; vmax = False
@@ -587,24 +587,30 @@ if __name__=="__main__":
             P.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, new_plot=False)
         plt.yscale("log")
 
-    def lambdavcomplexityplots(saveplot = False):
+    def lambdavcomplexityplots(noise=1e-1, N=400, saveplot = False):
         I = Project1()
-        I.gendat(400, noisefraq=1e-1)
+        I.gendat(N, noisefraq=1e-1)
         lambds = np.logspace(-11,-1,11)
         polydegs = np.arange(2,12)
         regtype = Ridge
-        noise = 1e-1
         I.cost = "R2"
         I.frac = 1.0
         I.compnoisy=False
         I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, showvals=True, saveplot = saveplot)
-        I.cost = "MSE"
-        lambd = np.array([10**-5])
-        polydegs = np.arange(2,17)
-        I.lambda_vs_complexity_error(lambd, polydegs, regtype, noise)
-        lambd = np.array([10**-3])
-        polydegs = np.arange(2,25)
-        I.lambda_vs_complexity_error(lambd, polydegs, regtype, noise)
+        # I.cost = "MSE"
+        # lambd = np.array([10**-5])
+        # polydegs = np.arange(2,17)
+        # I.lambda_vs_complexity_error(lambd, polydegs, regtype, noise)
+        # lambd = np.array([10**-3])
+        # polydegs = np.arange(2,25)
+        # I.lambda_vs_complexity_error(lambd, polydegs, regtype, noise)
+
+    def multilvcplots():
+        noises = np.logspace(-3,-1, 3)
+        datapoints = np.array([100, 200, 400, 1000])
+        for noise in noises:
+            for N in datapoints:
+                lambdavcomplexityplots(noise, N, saveplot=True)
 
     def biasvarplots(resamps = 50):
         """
