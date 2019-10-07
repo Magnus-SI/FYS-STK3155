@@ -98,7 +98,7 @@ if __name__ == '__main__':
         T.frac = frac
         T.cost ="R2"
         lambds = np.logspace(-11,-1,11)
-        polydegs = np.arange(2,8)
+        polydegs = np.arange(2,25)
         R = Ridge
         optdeg, optlambd, optR2, optMSE = T.lambda_vs_complexity_error(lambds, polydegs, method, noise = 0, terrain=True, saveplot = saveplot)
         T.changepolydeg((optdeg, optdeg))
@@ -112,9 +112,10 @@ if __name__ == '__main__':
         which in turn can be read by latex. Different sets of values would correspond to
         OLS vs. Lasso vs. Ridge methods, along with different fractions of data and similar.
         """
-
-for frac in np.array([1e-2]):
-    terrainlambdacomplexanalysis(frac=frac, saveplot=True)
+    def multifracsave():
+        fracs = np.array([2e-3, 3e-3, 5e-3, 1e-2, 3e-2, 1e-1, 2e-1])
+        for frac in fracs:
+            terrainlambdacomplexanalysis(method = Ridgeskl, frac=frac, saveplot=True)
 
     # terrain.fit_frac(R,frac)
     # print("betas = ",terrain.beta)

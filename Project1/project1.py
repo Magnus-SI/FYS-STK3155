@@ -339,22 +339,22 @@ class Project1:
             self.cost = "R2"
             print("Best R2: %.4f\nCorresponding MSE: %.2e\nOptimal degree: %i\nOptimal log10(lambda): %g"%(optR2, optMSE, optdeg, np.log10(optlambd)))
             if terrain:
-                self.save_results_latex(filename = "terrain%s.txt"%(regtype.__name__), results = [int(self.N*self.frac), optR2, optMSE, optdeg, np.log10(optlambd)], format_types = ['%i', '%.4f', '%.3e', '%i', '%.1f'])
+                self.save_results_latex(filename = "terrain%s.txt"%(regtype.__name__), results = [int(self.N*self.frac), optR2, np.sqrt(optMSE), optdeg, np.log10(optlambd)], format_types = ['%i', '%.4f', '%.3e', '%i', '%.1f'])
             else:
-                self.save_results_latex(filename = "franke%scompn%s.txt"%(regtype.__name__, self.compnoisy), results = [np.log10(noise), int(self.N*self.frac), optR2, optMSE, optdeg, np.log10(optlambd)], format_types = ['%.1f', '%i', '%.4f', '%.32', '%i', '%.1f'])
+                self.save_results_latex(filename = "franke%scompn%s.txt"%(regtype.__name__, self.compnoisy), results = [np.log10(noise), int(self.N*self.frac), optR2, np.sqrt(optMSE), optdeg, np.log10(optlambd)], format_types = ['%.1f', '%i', '%.4f', '%.32', '%i', '%.1f'])
 
         elif self.cost=="MSE":
             vmin = False; vmax = False
 
         if terrain:
-            plt.figure()
+            plt.figure(figsize = (12,12))
             sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',xticklabels=np.log10(lambds), yticklabels=polydegs, vmin = vmin, vmax = vmax)
             plt.xlabel(r'$log_{10}(\lambda)$')
             plt.ylabel('Polynomial degree')
-            plt.title('Terrain %s for %s'%(self.cost, regtype.__name__))
+            plt.title('Terrain %s for %i data points, using %s'%(self.cost, int(self.N*self.frac), regtype.__name__))
             if saveplot:
                 print("was here")
-                plt.savefig("Terrainfigs/%s_%i_compn%s.png"%(regtype.__name__, int(self.N*self.frac), self.compnoisy))
+                plt.savefig("Terrainfigs/%s_%i.png"%(regtype.__name__, int(self.N*self.frac)))
                 plt.close()
             else:
                 plt.show()
@@ -366,7 +366,7 @@ class Project1:
         h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',ax=ax1,xticklabels=np.around(np.log10(lambds), 1), yticklabels=polydegs, vmin = vmin, vmax = vmax)
         ax1.set_xlabel(r'$log_{10}(\lambda)$')
         ax1.set_ylabel('Polynomial degree')
-        ax1.set_title(r'%s Test Error, $\hat{\sigma} = %.1e$'%(regtype.__name__, noise))
+        ax1.set_title(r'%s Test Error, $\hat{\sigma} = %.1e, #datapoints = %i$'%(regtype.__name__, noise, int(self.N*self.frac)))
         h2=sns.heatmap(data=TrainErrors,annot=showvals,cmap='viridis',ax=ax2,xticklabels=np.around(np.log10(lambds), 1), yticklabels=polydegs, vmin = vmin, vmax = vmax)
         ax2.set_xlabel(r'$log_{10}(\lambda)$')
         ax2.set_ylabel('Polynomial degree')
