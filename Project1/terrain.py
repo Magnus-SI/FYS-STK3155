@@ -82,28 +82,34 @@ class Terrain(Project1):
 if __name__ == '__main__':
     filename = "SRTM_data_Norway_1.tif"
     terrain_data = imread(filename)
-    terrain = Terrain()
+    # terrain = Terrain()
     plt.imshow(terrain_data)
     plt.show()
-    terrain.set_data(terrain_data,deg = (7,7),indices = True)
+    # terrain.set_data(terrain_data,deg = (7,7),indices = True)
+    #
+    # terrain.plot_terrain()
 
-    terrain.plot_terrain()
 
-    _lambda = 0.001
-    frac = 0.2
-    R = Ridge(_lambda)
-    L = Lasso(_lambda)
-    terrain.frac = frac
-    #from time import time
-    #start = time()
-    # terrain.fit(R)
-    # print(time()-start)
-    # terrain.plot_fit()
-    terrain.cost ="R2"
-    lambds = np.logspace(-9,-1,17)
-    polydegs = np.arange(2,4)
-    R = Ridge
-    terrain.lambda_vs_complexity_error(lambds, polydegs, R, noise = 0, terrain=True)
+    def terrainlambdacomplexanalysis(method=Ridge, frac = 0.2):
+        T = Terrain()
+        T.set_data(terrain_data, deg = (5,5), indices = True)
+        T.plot_terrain()
+        frac = 0.2
+        T.frac = frac
+        T.cost ="R2"
+        lambds = np.logspace(-11,-1,11)
+        polydegs = np.arange(2,8)
+        R = Ridge
+        optdeg, optlambd, optR2 = T.lambda_vs_complexity_error(lambds, polydegs, method, noise = 0, terrain=True)
+        T.changepolydeg((optdeg, optdeg))
+        Mlambd = method(optlambd)
+        T.fit(method(optlambd))     #optimal fit
+        T.plot_fit()
+        """
+        NOTE: need some smart way of saving optdeg, optlambd, optR2 an appending to a table,
+        which in turn can be read by latex. Different sets of values would correspond to
+        OLS vs. Lasso vs. Ridge methods, along with different fractions of data and similar.
+        """
 
 
     # terrain.fit_frac(R,frac)

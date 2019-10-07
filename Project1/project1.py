@@ -337,7 +337,8 @@ class Project1:
             plt.ylabel('Polynomial degree')
             plt.title('Terrain %s for %s'%(self.cost, regtype.__name__))
             plt.show()
-            return
+            if self.cost == "R2":
+                return optdeg, optlambd, optR2
         f, axs = plt.subplots(2,1, figsize=(12,12))
         ax1, ax2 = axs
         h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',ax=ax1,xticklabels=np.around(np.log10(lambds), 1), yticklabels=polydegs, vmin = vmin, vmax = vmax)
