@@ -258,7 +258,7 @@ class Project1:
             print("Choose from MSE or R2 as a cost function")
             sys.exit(1)
 
-    def lambda_vs_complexity_error(self, lambds, polydegs, regtype, noise, showvals = True, new_plot = True, terrain=False, color = "#142cb1"):
+    def lambda_vs_complexity_error(self, lambds, polydegs, regtype, noise, showvals = True, new_plot = True, terrain=False, color = "#142cb1", saveplot=False):
         """
         Generates a heat map comparing performance of the hyperparamater lambda
         for either Ridge or Lasso, with varying complexity. Checks performance both
@@ -272,6 +272,7 @@ class Project1:
         new_plot: Used to compare multiple methods in the same plot.
         terrain: If True, do not plot training data, and do not use sigma in title
         color: color of the current line plot, not useful for 2d color plots.
+        saveplot: if True, save plot instead of showing
         cost function: self.cost determines whether to use R2 or MSE for plotting
 
         Note that train errors and test errors do not use exactly the same training set
@@ -332,9 +333,9 @@ class Project1:
             optR2 = TestErrors[optdeg, optlambd]
             print("Best R2: %.4f\nOptimal degree: %i\nOptimal log10(lambda): %g"%(TestErrors[optdeg, optlambd], polydegs[optdeg], np.log10(lambds[optlambd])))
             if terrain:
-                self.save_results_latex(filename = "terrain.txt", results = [int(self.N*self.frac), optR2, polydegs[optdeg], np.log10(lambds[optlambd])], format_types = ['%i', '%.4f', '%i', '%.1f'])
+                self.save_results_latex(filename = "terrain%s.txt"%(regtype.__name__), results = [int(self.N*self.frac), optR2, polydegs[optdeg], np.log10(lambds[optlambd])], format_types = ['%i', '%.4f', '%i', '%.1f'])
             else:
-                self.save_results_latex(filename = "franke.txt", results = [np.log10(noise), int(self.N*self.frac), optR2, polydegs[optdeg], np.log10(lambds[optlambd])], format_types = ['%.1f', '%i', '%.4f', '%i', '%.1f'])
+                self.save_results_latex(filename = "franke%scompn%s.txt"%(regtype.__name__, self.compnoisy), results = [np.log10(noise), int(self.N*self.frac), optR2, polydegs[optdeg], np.log10(lambds[optlambd])], format_types = ['%.1f', '%i', '%.4f', '%i', '%.1f'])
 
         elif self.cost=="MSE":
             vmin = False; vmax = False
@@ -345,9 +346,15 @@ class Project1:
             plt.xlabel(r'$log_{10}(\lambda)$')
             plt.ylabel('Polynomial degree')
             plt.title('Terrain %s for %s'%(self.cost, regtype.__name__))
-            plt.show()
+            if saveplot:
+                print("was here")
+                plt.savefig("Terrainfigs/%s%icompn%s.png"%(regtype.__name__, int(self.N*self.frac), self.compnoisy))
+                plt.close()
+            else:
+                plt.show()
             if self.cost == "R2":
                 return optdeg, optlambd, optR2
+
         f, axs = plt.subplots(2,1, figsize=(12,12))
         ax1, ax2 = axs
         h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',ax=ax1,xticklabels=np.around(np.log10(lambds), 1), yticklabels=polydegs, vmin = vmin, vmax = vmax)
@@ -358,7 +365,11 @@ class Project1:
         ax2.set_xlabel(r'$log_{10}(\lambda)$')
         ax2.set_ylabel('Polynomial degree')
         ax2.set_title(r'%s Train Error, $\hat{\sigma} = %.1e$'%(regtype.__name__, noise))
-        plt.show()
+        if saveplot:
+            plt.savefig("Frankefigs/%s%.1f%icompn%s.png"%(regtype.__name__, np.log10(noise), int(self.N*self.frac), self.compnoisy))
+            plt.close()
+        else:
+            plt.show()
         #return TestErrors, TrainErrors
 
     def degvnoiseerr(self, method, degs, noises, new_plot = True):
@@ -556,7 +567,7 @@ if __name__=="__main__":
             P.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, new_plot=False)
         plt.yscale("log")
 
-    def lambdavcomplexityplots():
+    def lambdavcomplexityplots(saveplot = False):
         I = Project1()
         I.gendat(400, noisefraq=1e-1)
         lambds = np.logspace(-11,-1,11)
@@ -566,7 +577,7 @@ if __name__=="__main__":
         I.cost = "R2"
         I.frac = 1.0
         I.compnoisy=False
-        I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, showvals=True)
+        I.lambda_vs_complexity_error(lambds, polydegs, regtype, noise, showvals=True, saveplot = saveplot)
         I.cost = "MSE"
         lambd = np.array([10**-5])
         polydegs = np.arange(2,17)

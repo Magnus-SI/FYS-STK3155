@@ -91,25 +91,30 @@ if __name__ == '__main__':
     # terrain.plot_terrain()
 
 
-    def terrainlambdacomplexanalysis(method=Ridge, frac = 0.2):
+    def terrainlambdacomplexanalysis(method=Ridge, frac = 0.2, saveplot = False):
         T = Terrain()
         T.set_data(terrain_data, deg = (5,5), indices = True)
-        T.plot_terrain()
+
         T.frac = frac
         T.cost ="R2"
         lambds = np.logspace(-11,-1,11)
         polydegs = np.arange(2,8)
         R = Ridge
-        optdeg, optlambd, optR2 = T.lambda_vs_complexity_error(lambds, polydegs, method, noise = 0, terrain=True)
+        optdeg, optlambd, optR2 = T.lambda_vs_complexity_error(lambds, polydegs, method, noise = 0, terrain=True, saveplot = saveplot)
         T.changepolydeg((optdeg, optdeg))
         Mlambd = method(optlambd)
         T.fit(method(optlambd))     #optimal fit
-        T.plot_fit()
+        if not saveplot:
+            T.plot_terrain()
+            T.plot_fit()
         """
         NOTE: need some smart way of saving optdeg, optlambd, optR2 an appending to a table,
         which in turn can be read by latex. Different sets of values would correspond to
         OLS vs. Lasso vs. Ridge methods, along with different fractions of data and similar.
         """
+
+for frac in np.array([1e-2]):
+    terrainlambdacomplexanalysis(frac=frac, saveplot=True)
 
     # terrain.fit_frac(R,frac)
     # print("betas = ",terrain.beta)
