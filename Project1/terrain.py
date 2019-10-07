@@ -23,6 +23,9 @@ class Terrain(Project1):
     def set_data(self,data,deg = (8,8),indices=False):
         """
         Set the data
+        data: array of data
+        deg: polynomial degree to create design matrix
+        indices: if True, investigate parts of data
         """
         self.polydeg = deg
         df = pd.DataFrame()
@@ -117,6 +120,28 @@ if __name__ == '__main__':
         for frac in fracs:
             terrainlambdacomplexanalysis(method = Ridgeskl, frac=frac, saveplot=True)
 
+    def fitdeg(deg = 50, frac = 0.2):
+        T = Terrain()
+        T.set_data(terrain_data, deg = (deg, deg), indices = True)
+        method = OLS3
+        T.fit(OLS3)
+        T.plot_fit()
+        plt.title("%s fit, degree %i"%(method.__name__, deg))
+
+    def multiOLS(degs = np.arange(2,51), frac = 0.2):
+        T = Terrain()
+        T.set_data(terrain_data, deg = (2, 2), indices = True)
+        T.cost = "MSE"
+        method = OLS3
+        MSEs = np.zeros(len(degs))
+        for i, deg in enumerate(degs):
+            print(deg)
+            T.changepolydeg((deg, deg))
+            T.fit(OLS3)
+            MSEs[i] = T.testeval(T.df)
+        #T.plot_fit()
+        #plt.title("%s fit, degree %i"%(method.__name__, deg))
+        return MSEs
     # terrain.fit_frac(R,frac)
     # print("betas = ",terrain.beta)
     # print("MSE = ",MSE(terrain.df['y'],terrain.X@terrain.beta))

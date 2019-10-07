@@ -48,17 +48,6 @@ class OLS3class:
         beta = np.linalg.pinv(X)@y
         return beta
 
-def R2(y,y_model):
-    """
-    Returns the R2 score for a dataset y and a set of predicted y values, y_model
-
-    Parametes:
-    y : datapoints
-    y_model : points estimated by model
-    """
-    score = 1 - (y - y_model)**2 / (y - np.mean(y_model))
-    return score
-
 
 def FrankeFunction(x,y):
     #The franke function as given
@@ -110,11 +99,13 @@ class Project1:
 
     def gendat(self,N,noisefraq=0.05, Function=FrankeFunction, deg=(2,2), randpoints = True):
         """
-        The data generation could, and probably should be changed to generate
-        linspaced data as to allow for easier plotting, but also easier fitting.
-        However, the code should be general enough that it would work anyways.
+        Generates data with a specifie3d function
         N: Amount of data points generated
         noisefraq: fraction of data range in the y-direction as standard deviation
+        Function: function to generate data for
+        deg: degree of polynomial, highest term of (x,y).
+        randpoints: True if randomly distributed points, False if linspaced.
+        If False, a countour plot is generated
         """
         self.polydeg = deg
         df = pd.DataFrame()
@@ -127,6 +118,12 @@ class Project1:
             x1 = np.linspace(0, 1, n)
             x2 = np.linspace(0, 1, n)
             x1, x2 = np.meshgrid(x1,x2)
+            plt.figure()
+            plt.contourf(x1, x2, Function(x1,x2), levels = 15, cmap="viridis")
+            plt.colorbar()
+            plt.xlabel("x")
+            plt.ylabel("y")
+            plt.show()
             x1 = x1.flatten()
             x2 = x2.flatten()
             y_exact = Function(x1,x2)
@@ -160,7 +157,7 @@ class Project1:
     def changepolydeg(self, polydeg=(5,5)):
         """
         Changes the polynomial degree of the design matrix
-        Also normalizes the design matrix
+        Also normalizes the design matrix with respect to the largest element in each column
         """
         self.polydeg = polydeg
         X = polyvander2d(self.df['x1'], self.df['x2'], polydeg)
@@ -172,6 +169,7 @@ class Project1:
         """
         Splits data into k equally sized sets, 1 of which will be used for testing,
         the rest for training
+        df: dataframe of data to split
         """
         df = df.sample(frac=1.0)     #ensures random order of data
         splitinds = len(df) * np.arange(1,k)/k  #indices to split at
@@ -182,8 +180,10 @@ class Project1:
     def kfolderr(self,ks=np.arange(2,6), method=OLS):
         """
         Evaluates the kfold error
-        ks:
+        ks: the values of k to split in
+        method: the method to evaluate the error on
         self.frac: can be smaller than 1 if dataset is large
+        self.cost: determines if the error is given as R2 or MSE
         """
         counter = 0
         cost = 0
@@ -198,13 +198,6 @@ class Project1:
                 counter+=1
         return cost/counter      #average mean square error
 
-    def trainvtesterr(self):
-        """
-        Splits data into training and test data, fits on training, and evaluates
-        error on both training and tests.
-        This can be done for varying complexities.
-        """
-        pass
 
     def trainerr(self, method):
         """
@@ -234,7 +227,7 @@ class Project1:
 
     def testeval(self,dftest):
         """
-        Evaluates MSE for current beta fit, on a given set of test data
+        Evaluates MSE or R2 for current beta fit, on a given set of test data
         dftest: pandas dataframe containing test data
         self.cost: MSE or R2
         """
@@ -384,6 +377,7 @@ class Project1:
         method: OLS/Ridge/Lasso, initialized with lambda
         degs: polynomial degrees to test for
         noises: noises to test fore
+        new_plot: if False, allows for plotting multiple methods in the same figure
         """
         if new_plot:
             fig=plt.figure()
@@ -406,7 +400,7 @@ class Project1:
         """
         Evaluates bias and variance for different polynomial degrees,
         using bootstrap to resample.
-        K: Number of samples
+        K: Number of samples in bootstrap
         model: model to fit
         polydegs: array of polynomial degrees to compare.
         """
@@ -480,7 +474,7 @@ class Project1:
 
     def plot3D(self,usenoisy=True,approx=False):
         """
-        WARNING: currently outdated, but should be updated to work at some point
+        WARNING: not tested for a while, but should still work
 
         usenoisy: whether to plot the noisy data, or the actual data
         approx: whether to plot the approximated fit of the data
@@ -517,7 +511,6 @@ class Project1:
         """
 
         plt.show()
-        pass
 
     def save_results_latex(self,filename,results,format_types):
         """
@@ -540,6 +533,9 @@ class Project1:
 if __name__=="__main__":
 
     def methodsvsnoise(lambd = 1e-4):
+        """
+        Plots the error for different methods and different values of noise in the same plot
+        """
         plt.close()
         P = Project1()
         P.gendat(500, noisefraq=1e-2)
@@ -550,6 +546,9 @@ if __name__=="__main__":
             P.degvnoiseerr(method, degs, noises, new_plot=False)
 
     def methodsvscomplexity(lambd = 1e-6, N=200, noise = 1e-2, savefigs = False):
+        """
+        Plots training and test error as a function of complexity for different methods
+        """
         I = Project1()
         I.gendat(N, noisefraq=1e-2)
         lambds = np.array([lambd])
@@ -567,6 +566,7 @@ if __name__=="__main__":
             plt.close()
 
     def multiOLSRidge():
+        "Generates and saves multiplte train-test plots"
         lambds = np.array([1e-5])#np.logspace(-8,-4, 5)
         noises = np.array([1e-1])#np.logspace(-3,-1, 3)
         dpoints = np.array([100, 200, 500, 1000, 2000, 3000])#dpoints = np.array([100, 200, 500, 1000, 2000, 3000])
@@ -588,6 +588,7 @@ if __name__=="__main__":
         plt.yscale("log")
 
     def lambdavcomplexityplots(noise=1e-1, N=400, saveplot = False):
+        "Evaluates the different methods as a function of both polynomial degree and the hyperparameter lambda"
         I = Project1()
         I.gendat(N, noisefraq=1e-1)
         lambds = np.logspace(-11,-1,11)
@@ -606,6 +607,10 @@ if __name__=="__main__":
         # I.lambda_vs_complexity_error(lambd, polydegs, regtype, noise)
 
     def multilvcplots():
+        """
+        Saves optimal data and figures, for multiple noise values and datapoint counts
+        of lambdavcomplexityplots.
+        """
         noises = np.logspace(-3,-1, 3)
         datapoints = np.array([100, 200, 400, 1000])
         for noise in noises:
@@ -626,73 +631,3 @@ if __name__=="__main__":
         P.compnoisy=False
         P.biasvar(resamps,method,polydegs)        #vs actual data
         plt.title(r"$\hat{\sigma} = 1e-2$, Ridge(1e-5) vs. actual, 1000 datapoints")
-
-    #I.gendat(2000, noisefraq=0.001)
-    #I.biasvar(20,OLS3,np.arange(1,20))
-
-    # I.gendat(5000, noisefraq=0.001)
-    # I.biasvar(20, OLS3, np.arange(1,15))
-
-    # I.changepolydeg(polydeg = (5,5))
-    # sigma_beta_Boot_OLS = I.Bootstrap(1000,OLS3)
-
-    # #print("betas = ",I.beta)
-    #
-    # _lambda = 0.01
-    # R = Ridge(_lambda)
-    #
-    # sigma_beta_Boot_Ridge = I.Bootstrap(1000,R)
-    # sigma_beta_theoretical_OLS = var_beta_OLS(I.X, I.sigma)
-    # sigma_beta_theoretical_Ridge = var_beta_Ridge(I.X, I.sigma,_lambda)
-    #
-    # print("beta variances theoretical (OLS) = \n", sigma_beta_theoretical_OLS)
-    # print("beta variances bootstrap (OLS) = \n", sigma_beta_Boot_OLS)
-    # print("relative difference (OLS) = \n", np.abs(sigma_beta_theoretical_OLS-sigma_beta_Boot_OLS)/np.abs(sigma_beta_theoretical_OLS))
-    #
-    # print("beta variances theoretical (Ridge) = \n", sigma_beta_theoretical_Ridge)
-    # print("beta variances bootstrap (Ridge) = \n", sigma_beta_Boot_Ridge)
-    #
-    # formatter = lambda x:'%.2f'%(x)
-    # print("relative difference (Ridge) = ")
-    # Ridge_diff = np.abs(sigma_beta_theoretical_Ridge-sigma_beta_Boot_Ridge)/np.abs(sigma_beta_theoretical_Ridge)
-    # print(Ridge_diff)
-
-
-    #ks = np.arange(2,6)
-    #MSE = I.kfolderr(ks)
-    #degs = np.arange(1,10)
-    #noises = np.logspace(-4,2,20)
-    #I.degvnoiseerr(degs,noises)
-
-    #lambds = np.logspace(-8,-1,8)
-    #I.MSEvlambda(lambds)
-    #print(I.Bootstrap(1000,OLS))
-    #print(I.beta)
-
-    #lambds = np.logspace(-8,-1,50)
-    #I.MSEvlambda(lambds)
-    #I = idk()
-    #I.gendat(21**2, noisefraq = 1e-3, Function = functest, deg = (2,2), randpoints = False)
-    #I.compnoisy=False
-    #I.MSEvlambda(lambds, method = Ridge(0),  polydeg = (2,2), noises = np.logspace(-4,-1, 4), avgnum = 15)
-
-    """
-    I = idk()
-    I.gendat(500,noisefraq=0.001)
-    I.fit(I.OLS,(5,5))
-    I.plot3D(True, True)
-    #print(I.Error())
-    I.N = 2000
-    noises = np.logspace(-2,0,50)
-    reg5,act5 = I.ErrorAnalysis(poldeg=(5,5),noises=noises)
-    reg8,act8 = I.ErrorAnalysis(poldeg=(8,8),noises=noises)
-    fig = plt.figure()
-    plt.plot(noises,reg5, label="deg 5 vs. noise")
-    plt.plot(noises,reg8, label="deg 8 vs. noise")
-    plt.plot(noises,act5, label="deg 5 vs. actual")
-    plt.plot(noises,act8, label="deg 8 vs. actual")
-    plt.legend()
-    plt.xscale("log")
-    plt.yscale("log")
-    plt.show()
-    """
