@@ -496,6 +496,24 @@ class Project1:
         plt.show()
         pass
 
+    def save_results_latex(self,filename,results,format_types):
+        """
+        Adds best ... to filename, and stores them in latex table format
+        Results should be a list of numbers.
+        format_types should be string like "%.3f" that specifies how each
+        column sould be formatted
+        """
+        file = open(filename,'a')
+        string = ''
+        for i,number in enumerate(results):
+            string += "%s&"%(format_types[i])%(number)
+        string = string[:-1]
+        string += "\\\ \n"
+        file.write(string)
+        file.close()
+
+
+
 if __name__=="__main__":
 
     def methodsvsnoise(lambd = 1e-4):
@@ -564,6 +582,7 @@ if __name__=="__main__":
         P.compnoisy=False
         P.biasvar(resamps,method,polydegs)        #vs actual data
         plt.title(r"$\hat{\sigma} = 1e-2$, Ridge(1e-10) vs. actual, 5000 datapoints")
+
     #I.gendat(2000, noisefraq=0.001)
     #I.biasvar(20,OLS3,np.arange(1,20))
 
