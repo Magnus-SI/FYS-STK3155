@@ -497,7 +497,7 @@ class Project1:
 
     def save_results_latex(self,filename,results,format_types):
         """
-        Adds best ... to filename, and stores them in latex table format
+        Adds result to filename, stored in latex table format
         Results should be a list of numbers.
         format_types should be string like "%.3f" that specifies how each
         column sould be formatted
@@ -581,7 +581,7 @@ if __name__=="__main__":
         P.compnoisy=False
         P.biasvar(resamps,method,polydegs)        #vs actual data
         plt.title(r"$\hat{\sigma} = 1e-2$, Ridge(1e-10) vs. actual, 5000 datapoints")
-        
+
     #I.gendat(2000, noisefraq=0.001)
     #I.biasvar(20,OLS3,np.arange(1,20))
 
