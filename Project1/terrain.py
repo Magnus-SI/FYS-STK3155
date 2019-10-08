@@ -130,18 +130,23 @@ if __name__ == '__main__':
 
     def multiOLS(degs = np.arange(2,51), frac = 0.2):
         T = Terrain()
+        T.frac = frac
         T.set_data(terrain_data, deg = (2, 2), indices = True)
-        T.cost = "MSE"
         method = OLS3
         MSEs = np.zeros(len(degs))
+        R2s = np.zeros(len(degs))
         for i, deg in enumerate(degs):
             print(deg)
             T.changepolydeg((deg, deg))
             T.fit(OLS3)
+            T.cost = "MSE"
             MSEs[i] = T.testeval(T.df)
+            T.cost = "R2"
+            R2s[i] = T.testeval(T.df)
+
         #T.plot_fit()
         #plt.title("%s fit, degree %i"%(method.__name__, deg))
-        return MSEs
+        return MSEs, R2s
     # terrain.fit_frac(R,frac)
     # print("betas = ",terrain.beta)
     # print("MSE = ",MSE(terrain.df['y'],terrain.X@terrain.beta))
