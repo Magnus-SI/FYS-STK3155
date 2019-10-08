@@ -60,9 +60,9 @@ def FrankeFunction(x,y):
 def functest(x,y):
     return x**3-x*y**2
 
-def var_beta_OLS(X, sigma):
+def sigma_beta_OLS(X, sigma):
     """
-    Returns the variance of the beta values calculated by OLS
+    Returns the standard deviation of the beta values calculated by OLS
 
     Paramaters :
     X : Design matrix (numpy array)
@@ -71,9 +71,9 @@ def var_beta_OLS(X, sigma):
     XTXinv_diag = np.diagonal(np.linalg.inv(np.transpose(X)@X))
     return np.sqrt(sigma*XTXinv_diag)
 
-def var_beta_Ridge(X, sigma, _lambda):
+def sigma_beta_Ridge(X, sigma, _lambda):
     """
-    Returns the variance of the beta values calculated by Ridge
+    Returns the standard deviation of the beta values calculated by Ridge
 
     Paramaters :
     X : Design matrix (numpy array)
@@ -531,6 +531,77 @@ class Project1:
 
 
 if __name__=="__main__":
+    def calculate_beta_variances(N,K,p,lambd,noisefraq = 1e-2):
+        """
+        Calculate the standard deviations for the beta paramaters
+        from the theoretical expressions, and with the bootstrap method
+        Uses theoretical expressions for OLS and rigde, and bootstrap on all
+        methods. Prints results to terminal
+
+        Parameters:
+        N - number of datapoints
+        K - nubmer of iterations of bootstrap
+        p - polynomial degree to fit
+        lambd - lambda parameter for ridge and lasso
+        noisefraq - noise, relative to the difference between maximum and minimum of the dataset
+        """
+        P = Project1()
+        P.gendat(N,noisefraq=noisefraq)
+        R = Ridge(lambd)
+        L = Lasso(lambd,tol = 1e-3)
+
+        P.fit(OLS3)
+        beta_OLS = P.beta
+
+        P.fit(R)
+        beta_ridge = P.beta
+
+        P.fit(L)
+        beta_lasso = P.beta
+
+        sigma_beta_OLS_ = sigma_beta_OLS(P.X,P.sigma)
+        sigma_beta_OLS_boot = P.Bootstrap(K,OLS3)
+        sigma_beta_ridge_ = sigma_beta_Ridge(P.X,P.sigma,lambd)
+        sigma_beta_ridge_boot = P.Bootstrap(K,R)
+        #sigma_beta_lasso_boot = P.Bootstrap(K,L)
+
+        OLS_results = np.zeros((len(beta_OLS),5))
+        OLS_results[:,0] = beta_OLS
+        OLS_results[:,1] = sigma_beta_OLS_
+        OLS_results[:,2] = sigma_beta_OLS_boot
+        OLS_results[:,3] = np.abs((sigma_beta_OLS_-sigma_beta_OLS_boot)/sigma_beta_OLS_)
+        OLS_results[:,4] = (sigma_beta_OLS_+sigma_beta_OLS_boot)*0.5*1.96
+
+        for i in range(len(beta_OLS)):
+            P.save_results_latex("betas_OLS.txt",OLS_results[i,:],["%.2f"]*5)
+
+        print("Results for OLS:\n","-"*20)
+        print("Values for beta :\n")
+        print(beta_OLS)
+        print("sigma beta (theoretical):\n")
+        print(sigma_beta_OLS_)
+        print("sigma beta (Bootstrap):\n")
+        print(sigma_beta_OLS_boot)
+        print("Relative difference between bootstrap and theoretical:\n")
+        print(np.abs((sigma_beta_OLS_-sigma_beta_OLS_boot)/sigma_beta_OLS_))
+
+        print("\nResults for ridge\n","-"*20)
+        print("Values for beta :\n")
+        print(beta_ridge)
+        print("sigma beta (theoretical):\n")
+        print(sigma_beta_ridge_)
+        print("sigma beta (Bootstrap):\n")
+        print(sigma_beta_ridge_boot)
+        print("Relative difference between bootstrap and theoretical:\n")
+        print(np.abs((sigma_beta_ridge_-sigma_beta_ridge_boot)/sigma_beta_ridge_))
+
+        """
+        print("\nResults for LASSO\n","-"*20)
+        print("Values for beta :\n")
+        print(beta_lasso)
+        print("sigma beta (Bootstrap):\n")
+        print(sigma_beta_lasso_boot)
+        """
 
     def methodsvsnoise(lambd = 1e-4):
         """
