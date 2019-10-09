@@ -8,6 +8,6 @@ terrain.py contains the class Terrain which inherits the methods from Project1. 
 
 Ridge.py contains the ridge function, both our own and the one in scikit-learn. It is stored as a class with initialized lambda parameters. Lasso.py is similar, but for the Lasso function
 
-test_class.py contains unit tests of the OLS, ridge and LASSO methods, can be run using pytest.
+test_class.py contains unit tests of the OLS, ridge and LASSO methods, can be run using pytest or nosetests
 
 terrain.py uses a terrain dataset "SRTM_data_Norway_1.tif". This can be downloaded from https://github.com/CompPhysics/MachineLearning/blob/master/doc/Projects/2019/Project1/DataFiles/SRTM_data_Norway_1.tif.
