@@ -89,19 +89,35 @@ if __name__ == '__main__':
     # terrain = Terrain()
     plt.imshow(terrain_data)
     plt.show()
+
+    def Tinit(frac):
+        "Initialized an instance of Terrain, and prints maximum and minimum terrain height"
+        T = Terrain()
+        T.set_data(terrain_data, deg = (5,5), indices=True)
+        T.frac = frac
+        yvals = T.df['y'].values
+        print("Maximum height: %im\nMinimum height: %im"%(np.max(yvals), np.min(yvals)))
+        return T
     # terrain.set_data(terrain_data,deg = (7,7),indices = True)
     #
     # terrain.plot_terrain()
 
 
     def terrainlambdacomplexanalysis(method=Ridge, frac = 0.2, saveplot = False):
+        """
+        Uses lambda_vs_complexity_error from project1.py to search for optimal lambda and complexity
+        method: method to use in the search, if lambds is array with multiple elements,
+        would be either Ridge or Lasso, if not, OLS should also work.
+        frac: fraction of data to use, default is set to use indiced data
+
+        """
         T = Terrain()
-        T.set_data(terrain_data, deg = (5,5), indices = True)
+        T.set_data(terrain_data, deg = (5,5), indices = True)       #uses indiced data by default
 
         T.frac = frac
         T.cost ="R2"
         lambds = np.logspace(-11,-1,11)
-        polydegs = np.arange(2,25)
+        polydegs = np.arange(2,25)      #WARNING: do not go much higher than 10 with the LASSO method
         R = Ridge
         optdeg, optlambd, optR2, optMSE = T.lambda_vs_complexity_error(lambds, polydegs, method, noise = 0, terrain=True, saveplot = saveplot)
         T.changepolydeg((optdeg, optdeg))
@@ -116,19 +132,39 @@ if __name__ == '__main__':
         OLS vs. Lasso vs. Ridge methods, along with different fractions of data and similar.
         """
     def multifracsave():
+        "Saves data and plots from multiple fractions of a method to a txt-file in latex format"
         fracs = np.array([2e-3, 3e-3, 5e-3, 1e-2, 3e-2, 1e-1, 2e-1])
         for frac in fracs:
             terrainlambdacomplexanalysis(method = Ridgeskl, frac=frac, saveplot=True)
 
-    def fitdeg(deg = 50, frac = 0.2):
+    def fitdeg(deg = 50, frac = 0.2, method =OLS3):
+        """
+        Fits terrain to a certain degree for plotting, also determines the related k-fold error
+        """
         T = Terrain()
         T.set_data(terrain_data, deg = (deg, deg), indices = True)
-        method = OLS3
-        T.fit(OLS3)
+        T.frac = frac
+        T.fit(method)
         T.plot_fit()
         plt.title("%s fit, degree %i"%(method.__name__, deg))
+        MSE = T.kfolderr(method = method)
+        T.cost = "R2"
+        R2 = T.kfolderr(method = method)
+        print("*%s*\nMSE: %.4e\nRMSE: %.4f\nR2: %.4f\n"%(method.__name__, MSE, np.sqrt(MSE), R2))
+
+    def OLSbestvsridgebest():
+        print("Errors found using k-fold cross validation:")
+        fitdeg(deg = 22, frac=0.2, method = Ridgeskl(1e-11))    #from tables in report
+        fitdeg(deg = 30, frac=0.2, method=OLS3)                 #higher degree of polynomial OLS = better
+
 
     def multiOLS(degs = np.arange(2,51), frac = 0.2):
+        """
+        Compares errors of OLS for multiple complexities.
+        Note that frac = 0.2 in effect means 20% training data, and 100% test data, so use only for estimate errors.
+        Using k-fold cross validation would take too long for this function. Optimal polynomial degree
+        with more exact error can instead be found by the fitdeg function.
+        """
         T = Terrain()
         T.frac = frac
         T.set_data(terrain_data, deg = (2, 2), indices = True)
