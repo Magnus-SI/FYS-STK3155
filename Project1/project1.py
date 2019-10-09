@@ -20,8 +20,8 @@ def OLS(X,y):
     OLS using our given formulas, note that this as of now does not work with
     polynomials of too high degree.
     """
-    XtXinv = np.linalg.inv(np.einsum('ij,ik',X,X))
-    return np.einsum('ij,kj,k',XtXinv,X,y)
+    XtXinv = np.linalg.inv(np.einsum('ij,ik',X,X))  #inverse of X^T X
+    return np.einsum('ij,kj,k',XtXinv,X,y)          #beta coefficients
 
 def OLS2(X,y):
     """
@@ -33,12 +33,12 @@ def OLS2(X,y):
 
 def OLS3(X,y):
     """
-    OLS using numpy pinv
+    OLS using numpy pinv for the pseudo inverse
     """
     beta = np.linalg.pinv(X)@y
     return beta
 
-class OLS3class:
+class OLS3class:    #same as OLS3, used for general compatability with Ridge and Lasso
     def __init__(self,lambd):
         self.__name__ = "OLS"
     def __call__(self, X,y):
@@ -50,7 +50,7 @@ class OLS3class:
 
 
 def FrankeFunction(x,y):
-    #The franke function as given
+    "The Franke function"
     term1 = 0.75*np.exp(-(0.25*(9*x-2)**2)-0.25*((9*y-2)**2))
     term2 = 0.75*np.exp(-((9*x+1)**2)/49.0 - 0.1*(9*y+1))
     term3 = 0.5*np.exp(-(9*x-7)**2/4.0 - 0.25*((9*y-3)**2))
@@ -58,6 +58,7 @@ def FrankeFunction(x,y):
     return term1 + term2 + term3 + term4
 
 def functest(x,y):
+    "Test function"
     return x**3-x*y**2
 
 def sigma_beta_OLS(X, sigma):
@@ -92,7 +93,7 @@ class Project1:
         self.compnoisy = True   #evaluate error compared to noisy data
         self.cost = "MSE"       #defines which cost function to use
         self.frac = 1.0         #fraction of the data to use
-        self.noexact = False       #if True, data is loaded and not generated, so no y_exact will exist
+        self.noexact = False       #if True, data is loaded and not generated, so no y_exact will exist in self.df
         pass
 
 
@@ -107,9 +108,9 @@ class Project1:
         randpoints: True if randomly distributed points, False if linspaced.
         If False, a countour plot is generated
         """
-        self.polydeg = deg
+        self.polydeg = deg      #degree of current polynomial used in design matrix
         df = pd.DataFrame()
-        self.N = N
+        self.N = N              #amount of data points
         if randpoints:
             x1,x2 = np.random.uniform(0,1,size=(2,N))
             y_exact = Function(x1,x2)
@@ -123,22 +124,22 @@ class Project1:
             plt.colorbar()
             plt.xlabel("x")
             plt.ylabel("y")
-            plt.show()
+            plt.show()          #shows contour of data
             x1 = x1.flatten()
             x2 = x2.flatten()
             y_exact = Function(x1,x2)
             self.N = n**2
 
 
-        df['x1'] = x1
-        df['x2'] = x2
-        df['y_exact'] = y_exact
+        df['x1'] = x1               #indep. variable 1
+        df['x2'] = x2               #indep. variable 2
+        df['y_exact'] = y_exact     #exact data with no noise
 
         self.df = df
         if not randpoints:
-            self.df = df.sample(frac=1.0)
-        self.changenoise(noisefraq = noisefraq)
-        self.changepolydeg(polydeg = deg)
+            self.df = df.sample(frac=1.0)       #randomizes order if linspaced data
+        self.changenoise(noisefraq = noisefraq) #changes noise to given fraction
+        self.changepolydeg(polydeg = deg)       #changes polynomial degree
 
     def changenoise(self, noisefraq):
         """
@@ -160,10 +161,10 @@ class Project1:
         Also normalizes the design matrix with respect to the largest element in each column
         """
         self.polydeg = polydeg
-        X = polyvander2d(self.df['x1'], self.df['x2'], polydeg)
-        norms = np.max(X,axis=0)
-        self.X = X/norms    #normalized
-        #self.norms = norms
+        X = polyvander2d(self.df['x1'], self.df['x2'], polydeg) #creates the design matrix
+        norms = np.max(X,axis=0)    #maximum values of each column of the design matrix
+        self.X = X/norms            #normalized by the maximum values of each column
+        #self.norms = norms         #necessary if one wants unnormalized beta values
 
     def kfoldsplit(self,k, df):
         """
@@ -174,7 +175,7 @@ class Project1:
         df = df.sample(frac=1.0)     #ensures random order of data
         splitinds = len(df) * np.arange(1,k)/k  #indices to split at
         splitinds = splitinds.astype(int)
-        dfsplit = np.split(df,splitinds)    #contains k dataframes, with the different sets of data
+        dfsplit = np.split(df,splitinds)    #contains a list of k dataframes, with the different sets of data
         return dfsplit
 
     def kfolderr(self,ks=np.arange(2,6), method=OLS):
@@ -201,7 +202,7 @@ class Project1:
 
     def trainerr(self, method):
         """
-        Trains on, and evalutes error on the whole data set
+        Trains on, and evalutes error on the whole data set, or a fraction given by self.frac
         method: method of fitting, either a function or initialized class
         """
         df = self.df.sample(frac = self.frac)
@@ -217,7 +218,7 @@ class Project1:
         (lambda): necessary when Ridge and Lasso is implemented
         """
         if df is None:
-            df = self.df.sample(frac = self.frac)      #note that this randomizes even if self.frac=1.0
+            df = self.df.sample(frac = self.frac)      #note that this randomizes order even if self.frac=1.0
         y  = df['y']
         inds = df.index
         self.beta = method(self.X[inds], y) #note that this beta is inverse normalized
@@ -237,9 +238,9 @@ class Project1:
         inds = dftest.index
         y_pred = self.X[inds]@self.beta     #normalized X @ invnormalized beta -> unnormalized y
         if self.compnoisy:
-            y = dftest['y']
+            y = dftest['y']                 #compare to noisy data
         else:
-            y = dftest['y_exact']
+            y = dftest['y_exact']           #compare to actual data
         N = len(y)
         if self.cost == "MSE":
             MSE = 1/N * np.sum((y_pred - y)**2)
@@ -278,9 +279,7 @@ class Project1:
         for i,deg in enumerate(polydegs):
             self.changepolydeg((deg,deg))
             for j,lambd in enumerate(lambds):
-                print(i,j)
-                #might reset lambda value of regtype here, instead of initializing new class all the time
-                #can't be done right now because of how the Lasso function is structured.
+                print(i,j)      #shows progress
                 TestErrors[i,j] = self.kfolderr(ks = np.arange(2,6), method = regtype(lambd))
                 TrainErrors[i,j] = self.trainerr(method = regtype(lambd))
 
@@ -319,10 +318,10 @@ class Project1:
             return
 
         if self.cost=="R2":
-            vmin = 0.7; vmax = 1
-            optarg = np.argmax(TestErrors)
-            optdegind = optarg//len(lambds)
-            optlambdind = optarg%len(lambds)
+            vmin = 0.7; vmax = 1                #NOTE: change this if worse R2 scores
+            optarg = np.argmax(TestErrors)      #index of optimal error
+            optdegind = optarg//len(lambds)     #index of optimal degree
+            optlambdind = optarg%len(lambds)    #index of optimal lambda
             optdeg = polydegs[optdegind]
             optlambd = lambds[optlambdind]
             optR2 = TestErrors[optdegind, optlambdind]
@@ -404,14 +403,14 @@ class Project1:
         model: model to fit
         polydegs: array of polynomial degrees to compare.
         """
-        split = int(0.8*self.N)
+        split = int(0.8*self.N)             #80-20 train-test split
         MSEs = np.zeros(len(polydegs))
         biass = np.zeros(len(polydegs))
         variances = np.zeros(len(polydegs))
-        dftrain, dftest = np.split(self.df, [split])
+        dftrain, dftest = np.split(self.df, [split])    #performs the split
         testinds = dftest.index
         y = dftest['y'].values
-        msebest = 1e10
+        msebest = 1e10                      #temporary worst value, for saving the best value
         if not self.compnoisy:
             y = dftest['y_exact'].values
         for j,polydeg in enumerate(polydegs):
