@@ -10,4 +10,4 @@ Ridge.py contains the ridge function, both our own and the one in scikit-learn. 
 
 test_class.py contains unit tests of the OLS, ridge and LASSO methods, can be run using pytest or nosetests
 
-terrain.py uses a terrain dataset "SRTM_data_Norway_1.tif". This can be downloaded from https://github.com/CompPhysics/MachineLearning/blob/master/doc/Projects/2019/Project1/DataFiles/SRTM_data_Norway_1.tif.
+terrain.py uses a terrain dataset "SRTM_data_Norway_1.tif". This can be downloaded from https://github.com/CompPhysics/MachineLearning/blob/master/doc/Projects/2019/Project1/DataFiles/SRTM_data_Norway_1.tif, and must be placed in the Project1 directory for terrain.py to work. Replacing the name of the requested terrain_data should also work if other .tif files are to be tested.
