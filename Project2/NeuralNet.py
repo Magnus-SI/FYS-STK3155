@@ -3,12 +3,13 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 class FFNN:
-    def __init__(self, hlayers):
+    def __init__(self, hlayers, ativation):
         """
         hlayers: list of hidden layer, e.g. [50, 20]
         """
         self.hlayers = np.array(hlayers).astype(int)
         self.dataload()
+        self.activation = activation    #function
 
     def dataload(self, loader):
         """
@@ -30,11 +31,12 @@ class FFNN:
         # y = df[y_vars]
         self.weights = [np.random.uniform(0,1, size = (layers[i], layers[i+1])
                         for i in range(len(layers)-1)]
-        self.biass = [np.ones((layers[i+1]))*0.01
-                        for i in range(len(layers)-1)]
+        self.biass = [np.ones((size))*0.01
+                        for size in self.hlayers]
 
     def feedforward(self):
-        pass
+        for i in range(len(self.hlayers)):
+            pass
 
     def backpropagate(self):
         pass
