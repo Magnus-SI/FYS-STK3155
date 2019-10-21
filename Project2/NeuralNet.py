@@ -1,7 +1,25 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import sklearn as skl
 
+def testletter():
+    digits = skl.datasets.load_digits()
+    inputs = digits.images
+    labels = digits.target
+    N = inputs.shape[0]
+    onehot = np.zeros((N,10))
+    onehot[np.arange(N), labels] = 1
+    X = inputs.reshape(N, inputs.shape[1]*inputs.shape[2])
+    df = pd.DataFrame()
+    X_vars = [str(i) for i in range(1,65)]
+    y_vars = [str(i) for i in range(10)]
+    for i,x in enumerate(X_vars):
+        df[x] = X[:,i]
+    for i,y in enumerate(y_vars):
+        df[y] = onehot[:,i]
+
+    return df, X_vars, y_vars
 
 def testlinreg():
     df = pd.DataFrame()
@@ -51,11 +69,12 @@ class FFNN:
         hlayers: list of hidden layer, e.g. [50, 20]
         """
         self.hlayers = np.array(hlayers).astype(int)
-        self.dataload(testclassify)
+        self.dataload(testletter)
         self.traintest()
         self.NNinit()
         self.activation = activation    #function
         self.outactivation = outactivation
+        self.eta = 0.1
 
     def dataload(self, loader):
         """
@@ -75,28 +94,45 @@ class FFNN:
         layers = [len(X_vars)] + list(self.hlayers) + [len(y_vars)]
         # X = df[X_vars]
         # y = df[y_vars]
-        self.weights = [np.random.uniform(0,1, size = (layers[i], layers[i+1]))
+        self.weights = [1e-2*np.random.uniform(0,1, size = (layers[i], layers[i+1]))
                         for i in range(len(layers)-1)]
         self.biass = [np.ones((layers[i]))*0.01
                         for i in range(1, len(layers))]
 
-    def feedforward(self, train = True):
-        if train:
-            clayer = self.dftrain[self.X_vars].values
-        else:
-            clayer = self.dftest[self.X_vars].values
+    def feedforward(self):
+        clayer = self.dftrain[self.X_vars].values
+        # print(clayer)
+        # print(sigmoid(clayer))
+        self.ah = [clayer]
 
         for i in range(len(self.hlayers)):      #propagate through hidden layers
             zh = clayer@self.weights[i] + self.biass[i]
+            # print(zh)
             clayer = self.activation(zh)
+            self.ah.append(clayer)
+            # print(clayer)
 
         z_out = clayer@self.weights[-1] + self.biass[-1]
         self.out = self.outactivation(z_out)
 
     def backpropagate(self):
-        pass
+        outerror = self.out - self.dftrain[self.y_vars].values
+        self.weights[-1] -= self.eta * self.ah[-1].T@outerror
+        self.biass[-1] -= self.eta * np.sum(outerror, axis=0)
+        err = outerror
+        for i in range(len(self.hlayers)):
+            err = err@self.weights[-1-i].T * self.ah[-1-i] * (1-self.ah[-1-i])
+            wgrad = self.ah[-2-i].T@err
+            bgrad = np.sum(err, axis=0)
+            self.weights[-2-i] -= self.eta * wgrad
+            self.biass[-2-i] -= self.eta * bgrad
 
     def train(self, n_epochs):
+        for n in range(n_epochs):
+            self.feedforward()
+            self.backpropagate()
+
+    def testpredict(self):
         pass
 
     def error(self):
@@ -109,6 +145,6 @@ def gradientmethod():
 
 
 if __name__ == "__main__":
-    N1 = FFNN(hlayers = [50, 20], activation = aRELU(0.01), outactivation = softmax)
+    N1 = FFNN(hlayers = [50, 20, 40], activation = aRELU(0.1), outactivation = softmax)
     N1.feedforward()
-    print(self.out)
+    print(N1.out)
