@@ -4,6 +4,19 @@ import pandas as pd
 import sklearn as skl
 from sklearn import datasets
 from autograd import elementwise_grad as egrad
+from autograd import jacobian, grad
+
+def jacobian_diagonal(f,dim):
+    """
+    Returns a list (?) of the functions to get the derivatives on the
+    diagonal of the jacobian matrix
+    """
+    f_i = lambda i: lambda *args: f(*args)[:,i]
+    def derivative(*args):
+        arr = np.array(*args)
+        print(arr.shape)
+        np.array([egrad(f_i(i))(arr[:,i]) for i in range(dim)])
+    return derivative
 
 def testletter():
     digits = datasets.load_digits()
@@ -53,7 +66,7 @@ def softmax(x):
     x: array of shape nxp where n contains different data points, and p
     describes different nodes in layer
     """
-    return np.exp(x)/np.sum(np.exp(x), axis=1, keepdims = True)
+    return np.exp(x)/np.sum(np.exp(x), axis = 1, keepdims = True)
 
 def cost_regression(value,target):
     """
@@ -87,9 +100,14 @@ class FFNN:
         self.cost = cost # cost function
         self.dcda = egrad(cost,0) # partial derivtive of the cost function (with regards to a)
         self.dfdx = egrad(activation) # derivative of activation function
-        self.dodx = egrad(outactivation)
+        if outactivation == softmax:
+            self.dodx = jacobian_diagonal(outactivation,10) # TODO: Find way not hardcode
+        else:
+            self.dodx = egrad(outactivation)
         self.ah = [0] * (len(hlayers)+1) # list of a-vectors
         self.zh = [0] * (len(hlayers)+1) # list of z-vectors
+        self.delta = [0]*(len(self.hlayers)+1) # list of delta vectors
+
 
     def dataload(self, loader):
         """
@@ -133,20 +151,24 @@ class FFNN:
         z_out = clayer@self.weights[-1] + self.biass[-1]
         self.z_out = z_out
         self.out = self.outactivation(z_out)
+        #self.out /= np.sum(self.out, axis = 1, keepdims = True)
 
     def backpropagate(self):
-        eta, weights, biass = self.eta, self.weights, self.biass
-        delta = [0]*(len(self.hlayers)+1)
-        delta[-1] = self.outactivation(self.z_out)*(1 - self.outactivation(self.z_out))*self.dcda(self.out,self.dftrain[self.y_vars].values)
+        eta, weights, biass, delta = self.eta, self.weights, self.biass, self.delta
+        print(self.dodx(self.z_out).shape, self.z_out.shape)
+        delta[-1] = self.dodx(self.z_out)*self.dcda(self.out,self.dftrain[self.y_vars].values)
+        # Calculate delta values
         for i in range(len(self.hlayers)):
             delta[-2-i] = (delta[-1-i]@weights[-1-i].T) * self.dfdx(self.zh[-1-i])
+        # Update weights and biases
         for i in range(len(self.hlayers)):
-            self.weights[-1-i] -= eta * self.ah[-1-i].T@delta[-1-i]
-            self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 0)
+            self.weights[-1-i] -= eta * self.ah[-1-i].T@delta[-1-i]/self.N_train
+            self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 0)/self.N_train
 
     def train(self, n_epochs):
         for n in range(n_epochs):
             self.feedforward()
+            print(self.out[7])
             self.backpropagate()
 
     def testpredict(self):
