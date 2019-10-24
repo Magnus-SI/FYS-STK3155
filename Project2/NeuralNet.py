@@ -11,11 +11,10 @@ def jacobian_diagonal(f,dim):
     Returns a list (?) of the functions to get the derivatives on the
     diagonal of the jacobian matrix
     """
-    f_i = lambda i: lambda *args: f(*args)[:,i]
+    f_i = lambda i: lambda *args: f(*args)[None,i]
     def derivative(*args):
         arr = np.array(*args)
-        print(arr.shape)
-        np.array([egrad(f_i(i))(arr[:,i]) for i in range(dim)])
+        np.array([egrad(f_i(i))(arr[None,i]) for i in range(dim)])
     return derivative
 
 def testletter():
@@ -96,7 +95,7 @@ class FFNN:
         self.NNinit()
         self.activation = activation    #function
         self.outactivation = outactivation
-        self.eta = 1.0
+        self.eta = 0.1
         self.cost = cost # cost function
         self.dcda = egrad(cost,0) # partial derivtive of the cost function (with regards to a)
         self.dfdx = egrad(activation) # derivative of activation function
@@ -136,39 +135,35 @@ class FFNN:
 
     def feedforward(self):
         clayer = self.dftrain[self.X_vars].values
-        # print(clayer)
-        # print(sigmoid(clayer))
+
         self.ah[0] = clayer
 
         for i in range(len(self.hlayers)):      #propagate through hidden layers
             zh = clayer@self.weights[i] + self.biass[i]
             self.zh[i+1] = zh
-            # print(zh)
+
             clayer = self.activation(zh)
             self.ah[i+1] = clayer
-            # print(clayer)
+
 
         z_out = clayer@self.weights[-1] + self.biass[-1]
         self.z_out = z_out
         self.out = self.outactivation(z_out)
-        #self.out /= np.sum(self.out, axis = 1, keepdims = True)
 
     def backpropagate(self):
         eta, weights, biass, delta = self.eta, self.weights, self.biass, self.delta
-        print(self.dodx(self.z_out).shape, self.z_out.shape)
-        delta[-1] = self.dodx(self.z_out)*self.dcda(self.out,self.dftrain[self.y_vars].values)
+        delta[-1] = self.out*(1-self.out)*self.dcda(self.out,self.dftrain[self.y_vars].values)
         # Calculate delta values
         for i in range(len(self.hlayers)):
-            delta[-2-i] = (delta[-1-i]@weights[-1-i].T) * self.dfdx(self.zh[-1-i])
+            delta[-2-i] = (delta[-1-i]@weights[-1-i].T) * self.ah[-1-i]*(1-self.ah[-1-i])
         # Update weights and biases
-        for i in range(len(self.hlayers)):
+        for i in range(len(self.hlayers)+1):
             self.weights[-1-i] -= eta * self.ah[-1-i].T@delta[-1-i]/self.N_train
             self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 0)/self.N_train
 
     def train(self, n_epochs):
         for n in range(n_epochs):
             self.feedforward()
-            print(self.out[7])
             self.backpropagate()
 
     def testpredict(self):
@@ -185,5 +180,5 @@ def gradientmethod():
 
 if __name__ == "__main__":
     N1 = FFNN(hlayers = [50, 40, 20], activation = aRELU(0.1), outactivation = softmax, cost = cost_regression)
-    N1.train(100)
+    N1.train(10000)
     print(N1.out)
