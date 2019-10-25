@@ -138,8 +138,11 @@ class FFNN:
                         for i in range(1, self.N_layers+1)]
 
 
-    def feedforward(self):
-        clayer = self.dftrain[self.X_vars].values.T
+    def feedforward(self, test =False):
+        if test:
+            clayer = self.dftest[self.X_vars].values.T# TEMP:
+        else:
+            clayer = self.dftrain[self.X_vars].values.T
 
         self.ah[0] = clayer
         for i in range(self.N_layers-1):      #propagate through hidden layers
@@ -170,7 +173,10 @@ class FFNN:
             self.backpropagate()
 
     def testpredict(self):
-        pass
+        self.feedforward(test=True)
+        prednums = np.argmax(self.out, axis = 0)
+        nums = np.argmax(self.dftest[self.y_vars].values, axis = 1)
+        return np.sum((prednums-nums)==0)/ len(nums)
 
     def error(self):
         pass
@@ -185,7 +191,9 @@ if __name__ == "__main__":
     N1 = FFNN(hlayers = [20,10], activation = aRELU(0.01), outactivation = softmax, cost = cost_regression)
     N1.train(1000)
     N1.feedforward()
-    print(N1.out)
+    #print(N1.out)
+    predscore = N1.testpredict()
+    print(predscore)
     """
     model = tf.keras.models.Sequential(
         [
