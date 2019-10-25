@@ -131,7 +131,8 @@ class FFNN:
 
         # X = df[X_vars]
         # y = df[y_vars]
-        self.weights = [1e-1*np.random.uniform(0,1, size = (layers[i+1], layers[i]))
+        scale_constant = 0.5e-0
+        self.weights = [scale_constant*np.random.uniform(0,1, size = (layers[i+1], layers[i]))-scale_constant/2
                         for i in range(self.N_layers)]
 
         self.biass = [np.ones((layers[i])).T*0.01
@@ -178,6 +179,12 @@ class FFNN:
         nums = np.argmax(self.dftest[self.y_vars].values, axis = 1)
         return np.sum((prednums-nums)==0)/ len(nums)
 
+    def trainpredict(self):
+        self.feedforward()
+        prednums = np.argmax(self.out, axis = 0)
+        nums = np.argmax(self.dftrain[self.y_vars].values, axis = 1)
+        return np.sum((prednums-nums)==0)/ len(nums)
+
     def error(self):
         pass
 
@@ -188,12 +195,15 @@ def gradientmethod():
 
 
 if __name__ == "__main__":
-    N1 = FFNN(hlayers = [20,10], activation = aRELU(0.01), outactivation = softmax, cost = cost_regression)
-    N1.train(1000)
+    N1 = FFNN(hlayers = [30,15], activation = aRELU(0.01), outactivation = softmax, cost = cost_regression)
+    N1.train(5000)
     N1.feedforward()
     #print(N1.out)
     predscore = N1.testpredict()
-    print(predscore)
+    print("Fraction of correct guesses =", predscore)
+    N_test = len(N1.dftest[N1.y_vars].values)
+    print(f"{int(round(predscore*N_test)):d} correct out of {N_test} testing datapoints")
+    print(f"Training accuracy = {N1.trainpredict()}")
     """
     model = tf.keras.models.Sequential(
         [
