@@ -106,7 +106,7 @@ class FFNN:
             self.dodx = egrad(outactivation)
         self.ah = [0] * (len(hlayers)+1) # list of a-vectors
         self.zh = [0] * (len(hlayers)+1) # list of z-vectors
-        self.delta = [0]*(len(self.hlayers)+1) # list of delta vectors
+        self.delta = [0] * (len(hlayers)+1) # list of delta vectors
 
 
     def dataload(self, loader):
@@ -126,15 +126,17 @@ class FFNN:
     def NNinit(self):
         df, X_vars, y_vars = self.dftrain, self.X_vars, self.y_vars
         layers = [len(X_vars)] + list(self.hlayers) + [len(y_vars)]
-        # X = df[X_vars]
-        # y = df[y_vars]
-        self.weights = [1e-2*np.random.uniform(0,1, size = (layers[i+1], layers[i]))
-                        for i in range(len(layers)-1)]
-
-        self.biass = [np.ones((layers[i])).T*0.01
-                        for i in range(1, len(layers))]
 
         self.N_layers = len(layers)-1 # Number of layers with weights and biases
+
+        # X = df[X_vars]
+        # y = df[y_vars]
+        self.weights = [1e-1*np.random.uniform(0,1, size = (layers[i+1], layers[i]))
+                        for i in range(self.N_layers)]
+
+        self.biass = [np.ones((layers[i])).T*0.01
+                        for i in range(1, self.N_layers+1)]
+
 
     def feedforward(self):
         clayer = self.dftrain[self.X_vars].values.T
@@ -180,10 +182,11 @@ def gradientmethod():
 
 
 if __name__ == "__main__":
-    N1 = FFNN(hlayers = [40], activation = aRELU(0), outactivation = softmax, cost = cost_regression)
-    N1.train(1000)
+    N1 = FFNN(hlayers = [40,25,10], activation = aRELU(0.01), outactivation = softmax, cost = cost_regression)
+    N1.train(10000)
     N1.feedforward()
     print(N1.out)
+    """
     model = tf.keras.models.Sequential(
         [
             tf.keras.layers.Dense(40, activation = tf.keras.activations.relu),
@@ -207,4 +210,4 @@ if __name__ == "__main__":
         batch_size = 1437
     )
     print(model.predict(N1.dftrain[N1.X_vars].values[0,None]))
-
+    """
