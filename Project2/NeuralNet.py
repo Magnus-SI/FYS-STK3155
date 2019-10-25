@@ -5,6 +5,7 @@ import sklearn as skl
 from sklearn import datasets
 from autograd import elementwise_grad as egrad
 from autograd import jacobian, grad
+import tensorflow as tf
 
 def jacobian_diagonal(f,dim):
     """
@@ -65,7 +66,7 @@ def softmax(x):
     x: array of shape nxp where n contains different data points, and p
     describes different nodes in layer
     """
-    return np.exp(x)/np.sum(np.exp(x), axis = 1, keepdims = True)
+    return np.exp(x)/np.sum(np.exp(x), axis = 0, keepdims = True)
 
 def cost_regression(value,target):
     """
@@ -127,39 +128,39 @@ class FFNN:
         layers = [len(X_vars)] + list(self.hlayers) + [len(y_vars)]
         # X = df[X_vars]
         # y = df[y_vars]
-        self.weights = [1e-2*np.random.uniform(0,1, size = (layers[i], layers[i+1]))
+        self.weights = [1e-2*np.random.uniform(0,1, size = (layers[i+1], layers[i]))
                         for i in range(len(layers)-1)]
 
-        self.biass = [np.ones((layers[i]))*0.01
+        self.biass = [np.ones((layers[i])).T*0.01
                         for i in range(1, len(layers))]
 
+        self.N_layers = len(layers)-1 # Number of layers with weights and biases
+
     def feedforward(self):
-        clayer = self.dftrain[self.X_vars].values
+        clayer = self.dftrain[self.X_vars].values.T
 
         self.ah[0] = clayer
-
-        for i in range(len(self.hlayers)):      #propagate through hidden layers
-            zh = clayer@self.weights[i] + self.biass[i]
+        for i in range(self.N_layers-1):      #propagate through hidden layers
+            zh = self.weights[i]@clayer + self.biass[i][:,None]
             self.zh[i+1] = zh
 
             clayer = self.activation(zh)
             self.ah[i+1] = clayer
 
-
-        z_out = clayer@self.weights[-1] + self.biass[-1]
+        z_out = self.weights[-1]@clayer + self.biass[-1][:,None]
         self.z_out = z_out
         self.out = self.outactivation(z_out)
 
     def backpropagate(self):
         eta, weights, biass, delta = self.eta, self.weights, self.biass, self.delta
-        delta[-1] = self.out*(1-self.out)*self.dcda(self.out,self.dftrain[self.y_vars].values)
+        delta[-1] = self.out*(1-self.out)*(self.out-self.dftrain[self.y_vars].values.T)
         # Calculate delta values
-        for i in range(len(self.hlayers)):
-            delta[-2-i] = (delta[-1-i]@weights[-1-i].T) * self.ah[-1-i]*(1-self.ah[-1-i])
+        for i in range(self.N_layers-1):
+            delta[-2-i] = (weights[-1-i].T@delta[-1-i]) * self.dfdx(self.ah[-1-i])
         # Update weights and biases
-        for i in range(len(self.hlayers)+1):
-            self.weights[-1-i] -= eta * self.ah[-1-i].T@delta[-1-i]/self.N_train
-            self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 0)/self.N_train
+        for i in range(self.N_layers):
+            self.weights[-1-i] -= eta * delta[-1-i]@self.ah[-1-i].T/self.N_train
+            self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 1)/self.N_train
 
     def train(self, n_epochs):
         for n in range(n_epochs):
@@ -179,6 +180,31 @@ def gradientmethod():
 
 
 if __name__ == "__main__":
-    N1 = FFNN(hlayers = [50, 40, 20], activation = aRELU(0.1), outactivation = softmax, cost = cost_regression)
-    N1.train(10000)
+    N1 = FFNN(hlayers = [40], activation = aRELU(0), outactivation = softmax, cost = cost_regression)
+    N1.train(1000)
+    N1.feedforward()
     print(N1.out)
+    model = tf.keras.models.Sequential(
+        [
+            tf.keras.layers.Dense(40, activation = tf.keras.activations.relu),
+            #tf.keras.layers.Dropout(0.2),
+            tf.keras.layers.Dense(20, activation = tf.keras.activations.relu),
+            tf.keras.layers.Dense(10, activation = 'softmax')
+        ])
+    # Compile model
+    model.compile(
+        optimizer = 'adam',
+        loss = 'mean_squared_error',
+        metrics = ['accuracy']
+    )
+    # Fit to training data
+    print(N1.dftrain[N1.X_vars].values.T.shape)
+    print(N1.dftrain[N1.y_vars].values.T.shape)
+    model.fit(
+        N1.dftrain[N1.X_vars].values,
+        N1.dftrain[N1.y_vars].values,
+        epochs = 1000,
+        batch_size = 1437
+    )
+    print(model.predict(N1.dftrain[N1.X_vars].values[0,None]))
+
