@@ -182,8 +182,8 @@ def gradientmethod():
 
 
 if __name__ == "__main__":
-    N1 = FFNN(hlayers = [40,25,10], activation = aRELU(0.01), outactivation = softmax, cost = cost_regression)
-    N1.train(10000)
+    N1 = FFNN(hlayers = [20,10], activation = aRELU(0.01), outactivation = softmax, cost = cost_regression)
+    N1.train(1000)
     N1.feedforward()
     print(N1.out)
     """
