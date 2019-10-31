@@ -52,7 +52,7 @@ class Logistic:
         """
         beta = self.beta
         p_vec = self.p()
-        #beta[0] += self.eta*np.sum(self.y-p_vec)/self.N
+        beta[0] += self.eta*np.sum(self.y-p_vec)/self.N
         beta[1:] += self.eta*self.X.T@(self.y-p_vec).T/self.N
 
     def fit(self,N,eta):
@@ -68,9 +68,9 @@ if __name__ == '__main__':
     X_data = cancer.data[:,indices]
     y_data = cancer.target
 
-    N_train = 20000
+    N_train = 30000
     model = Logistic(X_data,y_data)
-    model.fit(N_train,0.01)
+    model.fit(N_train,0.1)
     print(f"Training accuracy = {np.sum(np.round(model(X_data)) == y_data)/len(y_data)}")
     if np.all(np.round(model(X_data))>(1-1e-8)):
         print(f"All predictions = 1, looks like something went wrong")
