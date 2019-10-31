@@ -78,6 +78,28 @@ if __name__ == '__main__':
         print(f"All predictions = 0, looks like something went wrong")
 
 
+    n_train = 1000; p = 1
+    X_train = np.round(np.random.random((n_train,p)))
+    y_train = np.array(X_train>0.5).astype(float)[:,0]
+
+    n_test = 1432
+    X_test = np.round(np.random.random((n_test,p)))
+    y_test = np.array(X_test>0.5).astype(float)[:,0]
+
+    X_test_noround = np.random.random((n_train,p))
+    y_test_noround = np.array(X_test_noround>0.5).astype(float)[:,0]
+
+    test_model = Logistic(X_train,y_train)
+    test_model.fit(10000,0.01)
+
+    train_acc = np.sum(np.round(test_model(X_train)) == y_train)/len(y_train)
+    test_acc = np.sum(np.round(test_model(X_test)) == y_test)/len(y_test)
+    test_acc_noround = np.sum(np.round(test_model(X_test_noround)) == y_test_noround)/len(y_test_noround)
+
+    print(f"Training accuracy test model                = {train_acc:.3f}")
+    print(f"Testing accuracy test model (with rounding) = {test_acc:.3f}")
+    print(f"Testing accuracy test model  (no rounding)  = {test_acc_noround:.3f}")
+
     """
     correlation_matrix = cancerpd.corr().round(1)
     sns.heatmap(data=correlation_matrix, annot=True)
