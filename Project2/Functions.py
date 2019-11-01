@@ -1,6 +1,6 @@
 import numpy as np
 
-class RELU:
+class ReLU:
     def __init__(self, a):
         self.a = a
 
@@ -35,3 +35,4 @@ class sigmoid:
     def derivative(self,x):
         out = self.__call__(x)
         return out*(1-out)
+
