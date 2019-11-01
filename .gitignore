@@ -108,3 +108,4 @@ venv.bak/
 *.data
 *.dat
 *.txt
+*.xls
