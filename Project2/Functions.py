@@ -15,20 +15,20 @@ class Softmax:
         return np.exp(x)/np.sum(np.exp(x), axis = 0, keepdims = True)
 
     def derivative(self,x):
-        out = self.__call__(self,x)
+        out = self.__call__(x)
         return out*(1-out)
 
 class MSE:
-    def __init__(self,target):
-        self.target = target
+    """
+    Cost function, so it takes two arguments, value and target
+    """
+    def __call__(self,x,target):
+        return 0.5*np.sum((x-target)**2)
 
-    def __call__(self,x):
-        return 0.5*np.sum((x-self.target)**2)
+    def derivative(self,x,target):
+        return x-target
 
-    def derivative(self,x):
-        return x-self.target
-
-class sigmoid:
+class Sigmoid:
     def __call__(self,x):
         return 1/(1+np.exp(-x))
 

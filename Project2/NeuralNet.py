@@ -1,4 +1,4 @@
-import autograd.numpy as np
+import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import sklearn as skl
@@ -6,17 +6,7 @@ from sklearn import datasets
 from autograd import elementwise_grad as egrad
 from autograd import jacobian, grad
 import tensorflow as tf
-
-def jacobian_diagonal(f,dim):
-    """
-    Returns a list (?) of the functions to get the derivatives on the
-    diagonal of the jacobian matrix
-    """
-    f_i = lambda i: lambda *args: f(*args)[None,i]
-    def derivative(*args):
-        arr = np.array(*args)
-        np.array([egrad(f_i(i))(arr[None,i]) for i in range(dim)])
-    return derivative
+from Functions import MSE, ReLU, Softmax, Sigmoid
 
 def testletter():
     digits = datasets.load_digits()
@@ -61,29 +51,6 @@ def testclassify():
         df[y] = onehot[:,i]
     return df, X_vars, y_vars
 
-def softmax(x):
-    """
-    x: array of shape nxp where n contains different data points, and p
-    describes different nodes in layer
-    """
-    return np.exp(x)/np.sum(np.exp(x), axis = 0, keepdims = True)
-
-def cost_regression(value,target):
-    """
-    General cost function for regression
-    value and target should be one dimensional arrays, with equal length
-    """
-    return 0.5*np.sum((value-target)**2)
-
-def sigmoid(x):
-    return 1/(1+np.exp(-x))
-
-class aRELU:
-    def __init__(self, a):
-        self.a = a
-    def __call__(self, x):
-        return x*(x>0) + self.a*x*(x<=0)
-
 
 class FFNN:
     def __init__(self, hlayers, activation, outactivation, cost):
@@ -98,12 +65,6 @@ class FFNN:
         self.outactivation = outactivation
         self.eta = 0.1
         self.cost = cost # cost function
-        self.dcda = egrad(cost,0) # partial derivtive of the cost function (with regards to a)
-        self.dfdx = egrad(activation) # derivative of activation function
-        if outactivation == softmax:
-            self.dodx = jacobian_diagonal(outactivation,10) # TODO: Find way not hardcode
-        else:
-            self.dodx = egrad(outactivation)
         self.ah = [0] * (len(hlayers)+1) # list of a-vectors
         self.zh = [0] * (len(hlayers)+1) # list of z-vectors
         self.delta = [0] * (len(hlayers)+1) # list of delta vectors
@@ -159,10 +120,11 @@ class FFNN:
 
     def backpropagate(self):
         eta, weights, biass, delta = self.eta, self.weights, self.biass, self.delta
-        delta[-1] = self.out*(1-self.out)*(self.out-self.dftrain[self.y_vars].values.T)
+        self.outactivation.derivative(self.z_out)
+        delta[-1] = self.outactivation.derivative(self.z_out)*self.cost.derivative(self.out,self.dftrain[self.y_vars].values.T)
         # Calculate delta values
         for i in range(self.N_layers-1):
-            delta[-2-i] = (weights[-1-i].T@delta[-1-i]) * self.dfdx(self.ah[-1-i])
+            delta[-2-i] = (weights[-1-i].T@delta[-1-i]) * self.activation.derivative(self.ah[-1-i])
         # Update weights and biases
         for i in range(self.N_layers):
             self.weights[-1-i] -= eta * delta[-1-i]@self.ah[-1-i].T/self.N_train
@@ -195,7 +157,7 @@ def gradientmethod():
 
 
 if __name__ == "__main__":
-    N1 = FFNN(hlayers = [30,15], activation = aRELU(0.01), outactivation = softmax, cost = cost_regression)
+    N1 = FFNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = Softmax(), cost = MSE())
     N1.train(5000)
     N1.feedforward()
     #print(N1.out)
