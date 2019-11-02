@@ -6,7 +6,9 @@ from sklearn import datasets
 from autograd import elementwise_grad as egrad
 from autograd import jacobian, grad
 import tensorflow as tf
-from Functions import MSE, ReLU, Softmax, Sigmoid, CrossEntropy
+from Functions import MSE, ReLU, Softmax, Sigmoid, one
+from numpy.polynomial.polynomial import polyvander2d
+from sklearn.neural_network import MLPRegressor
 
 def testletter():
     digits = datasets.load_digits()
@@ -27,12 +29,26 @@ def testletter():
     return df, X_vars, y_vars
 
 def testlinreg():
+    def FrankeFunction(x,y):
+        "The Franke function"
+        term1 = 0.75*np.exp(-(0.25*(9*x-2)**2)-0.25*((9*y-2)**2))
+        term2 = 0.75*np.exp(-((9*x+1)**2)/49.0 - 0.1*(9*y+1))
+        term3 = 0.5*np.exp(-(9*x-7)**2/4.0 - 0.25*((9*y-3)**2))
+        term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
+        return term1 + term2 + term3 + term4
+
     df = pd.DataFrame()
-    df['x1'] = np.random.uniform(0,1, size=100)
-    df['x2'] = np.random.uniform(0,1, size=100)
-    df['y'] = df['x1']**2 - df['x2']
+    x1,x2 = np.random.uniform(0,1,size=(2,100))
+    y = FrankeFunction(x1,x2)
+    #X = polyvander2d(x1,x2, (10,10))
+    # X_vars = ["%i"%i for i in range(X.shape[1])]
+    # for i,label in enumerate(X_vars):
+    #     df[label] = X[:,i]
+    df['x1'] = x1
+    df['x2'] = x2
     X_vars = ['x1', 'x2']
     y_vars = ['y']
+    df['y'] = y
     return df, X_vars, y_vars
 
 def testclassify():
@@ -58,7 +74,7 @@ class FFNN:
         hlayers: list of hidden layer, e.g. [50, 20]
         """
         self.hlayers = np.array(hlayers).astype(int)
-        self.dataload(testletter)
+        self.dataload(testlinreg)
         self.traintest()
         self.NNinit()
         self.activation = activation    #function
@@ -147,6 +163,14 @@ class FFNN:
         nums = np.argmax(self.dftrain[self.y_vars].values, axis = 1)
         return np.sum((prednums-nums)==0)/ len(nums)
 
+    def testpredreg(self):
+        self.feedforward(test=True)
+        return 1/self.out.shape[1]*np.sum((self.out-self.dftest[self.y_vars].values.T)**2)
+
+    def trainpredreg(self):
+        self.feedforward()
+        return 1/self.out.shape[1]*np.sum((self.out-self.dftrain[self.y_vars].values.T)**2)
+
     def error(self):
         pass
 
@@ -157,15 +181,30 @@ def gradientmethod():
 
 
 if __name__ == "__main__":
-    N1 = FFNN(hlayers = [50,32,16], activation = ReLU(0.01), outactivation = Softmax(), cost = CrossEntropy())
-    N1.train(10000)
+    N1 = FFNN(hlayers = [100,50], activation = ReLU(0.01), outactivation = ReLU(1.00), cost = MSE())
+    N1.train(1000)
     N1.feedforward()
     #print(N1.out)
-    predscore = N1.testpredict()
-    print("Fraction of correct guesses =", predscore)
-    N_test = len(N1.dftest[N1.y_vars].values)
-    print(f"{int(round(predscore*N_test)):d} correct out of {N_test} testing datapoints")
-    print(f"Training accuracy = {N1.trainpredict()}")
+    print(N1.testpredreg(), N1.trainpredreg())
+
+    reg = MLPRegressor(hidden_layer_sizes = (100,50),
+                        solver = 'lbfgs',
+                        max_iter = 1000,
+                        tol = 1e-7,
+                        verbose = False)
+    reg.fit(N1.dftrain[N1.X_vars].values, N1.dftrain[N1.y_vars].values[:,0])
+    pred = reg.predict(N1.dftest[N1.X_vars].values)
+    print(1/len(pred) * np.sum((pred - N1.dftest[N1.y_vars].values[:,0])**2))
+    tpred = reg.predict(N1.dftrain[N1.X_vars].values)
+    print(1/len(tpred) * np.sum((tpred - N1.dftrain[N1.y_vars].values[:,0])**2))
+
+
+    "Regression tests below:"
+    # predscore = N1.testpredict()
+    # print("Fraction of correct guesses =", predscore)
+    # N_test = len(N1.dftest[N1.y_vars].values)
+    # print(f"{int(round(predscore*N_test)):d} correct out of {N_test} testing datapoints")
+    # print(f"Training accuracy = {N1.trainpredict()}")
     """
     model = tf.keras.models.Sequential(
         [
