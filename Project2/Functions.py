@@ -36,3 +36,10 @@ class Sigmoid:
         out = self.__call__(x)
         return out*(1-out)
 
+
+class CrossEntropy:
+    def __call__(self,x,target):
+        return -np.sum(target*np.log(x) + (1-target)*np.log(1-x))
+
+    def derivative(self,x,target):
+        return (x-target)/(x*(1-x))

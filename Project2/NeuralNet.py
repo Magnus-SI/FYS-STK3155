@@ -6,7 +6,7 @@ from sklearn import datasets
 from autograd import elementwise_grad as egrad
 from autograd import jacobian, grad
 import tensorflow as tf
-from Functions import MSE, ReLU, Softmax, Sigmoid
+from Functions import MSE, ReLU, Softmax, Sigmoid, CrossEntropy
 
 def testletter():
     digits = datasets.load_digits()
@@ -157,8 +157,8 @@ def gradientmethod():
 
 
 if __name__ == "__main__":
-    N1 = FFNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = Softmax(), cost = MSE())
-    N1.train(5000)
+    N1 = FFNN(hlayers = [50,32,16], activation = ReLU(0.01), outactivation = Softmax(), cost = CrossEntropy())
+    N1.train(10000)
     N1.feedforward()
     #print(N1.out)
     predscore = N1.testpredict()
