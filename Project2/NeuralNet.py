@@ -6,7 +6,7 @@ from sklearn import datasets
 from autograd import elementwise_grad as egrad
 from autograd import jacobian, grad
 import tensorflow as tf
-from Functions import MSE, ReLU, Softmax, Sigmoid, one
+from Functions import MSE, ReLU, Softmax, Sigmoid
 from numpy.polynomial.polynomial import polyvander2d
 from sklearn.neural_network import MLPRegressor
 
@@ -69,12 +69,12 @@ def testclassify():
 
 
 class FFNN:
-    def __init__(self, hlayers, activation, outactivation, cost):
+    def __init__(self, hlayers, activation, outactivation, cost, loader):
         """
         hlayers: list of hidden layer, e.g. [50, 20]
         """
         self.hlayers = np.array(hlayers).astype(int)
-        self.dataload(testlinreg)
+        self.dataload(loader)
         self.traintest()
         self.NNinit()
         self.activation = activation    #function
@@ -181,7 +181,7 @@ def gradientmethod():
 
 
 if __name__ == "__main__":
-    N1 = FFNN(hlayers = [100,50], activation = ReLU(0.01), outactivation = ReLU(1.00), cost = MSE())
+    N1 = FFNN(hlayers = [100,50], activation = ReLU(0.01), outactivation = ReLU(1.00), cost = MSE(), loader = testlinreg)
     N1.train(1000)
     N1.feedforward()
     #print(N1.out)
