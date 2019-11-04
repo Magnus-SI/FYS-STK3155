@@ -99,6 +99,7 @@ class FFNN:
         split = int(frac*self.N)             #80-20 train-test split
         self.dftrain, self.dftest = np.split(self.df, [split])    #performs the split
         self.N_train = self.dftrain[self.X_vars].values.shape[0]
+        self.inds = self.dftrain.index
 
     def NNinit(self):
         df, X_vars, y_vars = self.dftrain, self.X_vars, self.y_vars
@@ -120,7 +121,7 @@ class FFNN:
         if test:
             clayer = self.dftest[self.X_vars].values.T# TEMP:
         else:
-            clayer = self.dftrain[self.X_vars].values.T
+            clayer = self.dftrain.iloc[self.inds][self.X_vars].values.T
 
         self.ah[0] = clayer
         for i in range(self.N_layers-1):      #propagate through hidden layers
@@ -137,19 +138,23 @@ class FFNN:
     def backpropagate(self):
         eta, weights, biass, delta = self.eta, self.weights, self.biass, self.delta
         self.outactivation.derivative(self.z_out)
-        delta[-1] = self.outactivation.derivative(self.z_out)*self.cost.derivative(self.out,self.dftrain[self.y_vars].values.T)
+        delta[-1] = self.outactivation.derivative(self.z_out)*self.cost.derivative(self.out,self.dftrain.iloc[self.inds][self.y_vars].values.T)
         # Calculate delta values
         for i in range(self.N_layers-1):
             delta[-2-i] = (weights[-1-i].T@delta[-1-i]) * self.activation.derivative(self.ah[-1-i])
         # Update weights and biases
         for i in range(self.N_layers):
-            self.weights[-1-i] -= eta * delta[-1-i]@self.ah[-1-i].T/self.N_train
-            self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 1)/self.N_train
+            self.weights[-1-i] -= eta * delta[-1-i]@self.ah[-1-i].T/len(self.inds)
+            self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 1)/len(self.inds)
 
-    def train(self, n_epochs):
+    def train(self, n_epochs, batches = 1):
+        batchinds = np.split(self.dftrain.index, batches)
         for n in range(n_epochs):
-            self.feedforward()
-            self.backpropagate()
+            for batchi in batchinds:
+                self.inds = batchi
+                self.feedforward()
+                self.backpropagate()
+        self.inds = self.dftrain.index
 
     def testpredict(self):
         self.feedforward(test=True)
@@ -182,8 +187,8 @@ def gradientmethod():
 
 if __name__ == "__main__":
     N1 = FFNN(hlayers = [100,50], activation = ReLU(0.01), outactivation = ReLU(1.00), cost = MSE(), loader = testlinreg)
-    N1.train(1000)
-    N1.feedforward()
+    N1.train(200, batches = 10)
+    N1.feedforward(test=True)
     #print(N1.out)
     print(N1.testpredreg(), N1.trainpredreg())
 
