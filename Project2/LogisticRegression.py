@@ -32,11 +32,11 @@ class Logistic:
             _x = x
         return sigmoid(self.beta[0]+np.sum(_x*self.beta[1:],axis=1))
 
-    def p(self):
+    def p(self,indices):
         """
         returns n-size vecor p with probabilities for the 1 outcome
         """
-        beta, X = self.beta, self.X
+        beta, X = self.beta, self.X[indices]
         return sigmoid(beta[0]+np.sum(X*beta[1:],axis = 1))
 
     def cost(self,beta):
@@ -46,31 +46,58 @@ class Logistic:
         t = sigmoid(beta[0]+np.sum(X*beta[1:],axis = 1))
         return np.sum(y*t - np.log(1+np.exp(t)))
 
-    def update_beta(self):
+    def update_beta(self,indices):
         """
         updates beta values with the derivative of the cost function
         """
         beta = self.beta
-        p_vec = self.p()
-        beta[0] += self.eta*np.sum(self.y-p_vec)/self.N
-        beta[1:] += self.eta*self.X.T@(self.y-p_vec).T/self.N
+        p_vec = self.p(indices)
+        beta[0] += self.eta*np.sum(self.y[indices]-p_vec)/indices.size
+        beta[1:] += self.eta*self.X[indices].T@(self.y[indices]-p_vec).T/indices.size
 
-    def fit(self,N,eta):
+    def fit(self,N,eta,M=None):
+        """
+        Fits the beta-coefficient
+
+        The parameters (in order) are:
+        N - number of epochs
+        eta - learning rate
+        M - minibatchsize
+        """
+        if M == None:
+            M_size = self.N
+        elif M>self.N:
+            print("Given minibatch size was larger than the number of datapoints.\n\
+            Setting minibatch size to the size of the dataset")
+            M_size = self.N
+        else:
+            M_size = M
+
+        n_M = self.N//M_size # Number of minibatches
+        minibatc_indices = np.split(np.arange(self.N),np.arange(1,n_M)*M_size)
         self.eta = eta
+        self.indices = np.arange(self.N)
         for i in range(N):
-            self.update_beta()
+            for j in range(n_M):
+                ind = np.random.randint(n_M)
+                self.update_beta(minibatc_indices[ind])
+            np.random.shuffle(self.indices)
+            self.X = self.X[self.indices]
+            self.y = self.y[self.indices]
+
 
 if __name__ == '__main__':
     cancer = datasets.load_breast_cancer()
     cancerpd = pd.DataFrame(cancer.data, columns=cancer.feature_names)
-    indices = np.array([0,7]) #Using mean radius and mean concave points to predict
+    indices = np.array([0,7]) # Using mean radius and mean concave points to predict
     # (Seemed reasonable from plot)
     X_data = cancer.data[:,indices]
     y_data = cancer.target
 
-    N_train = 30000
+    N_train = 5000
     model = Logistic(X_data,y_data)
-    model.fit(N_train,0.1)
+    model.fit(N_train,0.01,100)
+
     print(f"Training accuracy = {np.sum(np.round(model(X_data)) == y_data)/len(y_data)}")
     if np.all(np.round(model(X_data))>(1-1e-8)):
         print(f"All predictions = 1, looks like something went wrong")
@@ -90,7 +117,7 @@ if __name__ == '__main__':
     y_test_noround = np.array(X_test_noround>0.5).astype(float)[:,0]
 
     test_model = Logistic(X_train,y_train)
-    test_model.fit(10000,0.01)
+    test_model.fit(10000,0.01,100)
 
     train_acc = np.sum(np.round(test_model(X_train)) == y_train)/len(y_train)
     test_acc = np.sum(np.round(test_model(X_test)) == y_test)/len(y_test)
