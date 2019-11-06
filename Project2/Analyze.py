@@ -10,7 +10,7 @@ class ModelAnalysis:
         """
         self.model = model
         self.df = df
-        self.Xstr, self.ystr = X,y
+        self.Xstr, self.ystr = Xstr,ystr
 
     def kfoldsplit(self,k, df):
         """
@@ -37,6 +37,8 @@ class ModelAnalysis:
         self.cost: the cost function to evaluate k-fold with
         *args extra arguments required by model.fit
         """
+        if type(ks) == int:
+            ks = np.array([ks])
         counter = 0
         cost = 0
         df = self.df.sample(frac=frac)     #same set of data used for all k-splits
@@ -48,8 +50,9 @@ class ModelAnalysis:
                 self.model.fit(dftrain[self.Xstr].values, dftrain[self.ystr].values, *args)
                 dftest = dfsplit[i]             #test data
                 #cost on test data
-                cost += cost(dftest[self.Xstr].values, dftest[self.ystr].values)
+                cost += costfunc(self.model(dftest[self.Xstr].values), dftest[self.ystr].values)
                 counter+=1
+                print(f"k = {k}, run number {i+1}, cost = {cost/counter}")
         return cost/counter      #average of the cost function
 
 
@@ -60,5 +63,5 @@ class ModelAnalysis:
         """
         df = self.df.sample(frac = self.frac)
         self.model.fit(df[self.Xstr].values,df[self.ystr].values, *args)
-        cost = costfunc(model(df[self.Xstr].values),df[self.ystr].values)
+        cost = costfunc(self.model(df[self.Xstr].values),df[self.ystr].values)
         return cost
