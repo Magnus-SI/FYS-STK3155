@@ -6,6 +6,7 @@ import seaborn as sns
 from LogisticRegression import Logistic
 from NeuralNet import FFNN
 from Functions import *
+from Analyze import ModelAnalysis
 
 class credlog(Logistic):
     def __init__(self):
@@ -69,8 +70,17 @@ class ccdata:
             pass
 
 if __name__ == "__main__":
+    """
     ccd = ccdata(NN = True)
     N1 = credNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = Softmax(), cost = CrossEntropy(), loader = ccd)
     N1.train(200)
     N1.feedforward()
     print(N1.trainpredict(), N1.testpredict())
+    """
+
+    df = pd.read_excel('ccdefaults.xls', skiprows = [1])
+    xstr = ['X'+str(i) for i in range(1,24)]
+    ystr = ['Y']
+    LogReg = Logistic()
+    LogAnalyze = ModelAnalysis(LogReg,df,xstr,ystr)
+    LogAnalyze.kfolderr(Accuracy(),5,1.0,1000,0.1,128)
