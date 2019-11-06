@@ -69,14 +69,12 @@ def testclassify():
 
 
 class FFNN:
-    def __init__(self, hlayers, activation, outactivation, cost, loader):
+    def __init__(self, hlayers, activation, outactivation, cost, Xfeatures, yfeatures):
         """
         hlayers: list of hidden layer, e.g. [50, 20]
         """
         self.hlayers = np.array(hlayers).astype(int)
-        self.dataload(loader)
-        self.traintest()
-        self.NNinit()
+        self.NNinit(Xfeatures, yfeatures)
         self.activation = activation    #function
         self.outactivation = outactivation
         self.eta = 0.1
@@ -85,25 +83,9 @@ class FFNN:
         self.zh = [0] * (len(hlayers)+1) # list of z-vectors
         self.delta = [0] * (len(hlayers)+1) # list of delta vectors
 
-
-    def dataload(self, loader):
-        """
-        X_vars and y_vars can be used to extract input and output
-        from a dataframe, allowing for simpler train-test splits
-        """
-        self.df, self.X_vars, self.y_vars = loader()
-        self.N = len(self.df)
-
-    def traintest(self, frac=0.8):
-        df = self.df
-        split = int(frac*self.N)             #80-20 train-test split
-        self.dftrain, self.dftest = np.split(self.df, [split])    #performs the split
-        self.N_train = self.dftrain[self.X_vars].values.shape[0]
-        self.inds = self.dftrain.index
-
-    def NNinit(self):
-        df, X_vars, y_vars = self.dftrain, self.X_vars, self.y_vars
-        layers = [len(X_vars)] + list(self.hlayers) + [len(y_vars)]
+    def NNinit(self, Xfeatures, yfeatures):
+        self.Xf = int(Xfeatures); self.yf = int(yfeatures)
+        layers = [self.Xf] + list(self.hlayers) + [self.yf]
 
         self.N_layers = len(layers)-1 # Number of layers with weights and biases
 
@@ -117,11 +99,8 @@ class FFNN:
                         for i in range(1, self.N_layers+1)]
 
 
-    def feedforward(self, test =False):
-        if test:
-            clayer = self.dftest[self.X_vars].values.T# TEMP:
-        else:
-            clayer = self.dftrain.iloc[self.inds][self.X_vars].values.T
+    def feedforward(self, X):
+        clayer = X.T
 
         self.ah[0] = clayer
         for i in range(self.N_layers-1):      #propagate through hidden layers
@@ -135,49 +114,37 @@ class FFNN:
         self.z_out = z_out
         self.out = self.outactivation(z_out)
 
-    def backpropagate(self):
+    def backpropagate(self, y):
         eta, weights, biass, delta = self.eta, self.weights, self.biass, self.delta
         self.outactivation.derivative(self.z_out)
-        delta[-1] = self.outactivation.derivative(self.z_out)*self.cost.derivative(self.out,self.dftrain.iloc[self.inds][self.y_vars].values.T)
+        delta[-1] = self.outactivation.derivative(self.z_out)*self.cost.derivative(self.out,y.T)
         # Calculate delta values
         for i in range(self.N_layers-1):
             delta[-2-i] = (weights[-1-i].T@delta[-1-i]) * self.activation.derivative(self.ah[-1-i])
         # Update weights and biases
         for i in range(self.N_layers):
-            self.weights[-1-i] -= eta * delta[-1-i]@self.ah[-1-i].T/len(self.inds)
-            self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 1)/len(self.inds)
+            self.weights[-1-i] -= eta * delta[-1-i]@self.ah[-1-i].T/y.shape[0]
+            self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 1)/y.shape[0]
 
-    def train(self, n_epochs, batches = 1):
-        batchinds = np.split(self.dftrain.index, batches)
+    def train(self, X, y, n_epochs, batches = 1):
+        allinds = np.arange(X.shape[0])
+        batchinds = np.array_split(allinds, batches)
         for n in range(n_epochs):
-            for batchi in batchinds:
-                self.inds = batchi
-                self.feedforward()
-                self.backpropagate()
-        self.inds = self.dftrain.index
+            for j in range(batches):
+                inds = batchinds[np.random.choice(range(batches))]
+                self.feedforward(X[inds])
+                self.backpropagate(y[inds])
 
-    def testpredict(self):
-        self.feedforward(test=True)
+    def predclass(self, X, y):
+        self.feedforward(X)
         prednums = np.argmax(self.out, axis = 0)
-        nums = np.argmax(self.dftest[self.y_vars].values, axis = 1)
+        nums = np.argmax(y, axis = 1)
         return np.sum((prednums-nums)==0)/ len(nums)
 
-    def trainpredict(self):
-        self.feedforward()
-        prednums = np.argmax(self.out, axis = 0)
-        nums = np.argmax(self.dftrain[self.y_vars].values, axis = 1)
-        return np.sum((prednums-nums)==0)/ len(nums)
+    def predreg(self, X, y):
+        self.feedforward(X)
+        return 1/self.out.shape[1]*np.sum((self.out-y.T)**2)
 
-    def testpredreg(self):
-        self.feedforward(test=True)
-        return 1/self.out.shape[1]*np.sum((self.out-self.dftest[self.y_vars].values.T)**2)
-
-    def trainpredreg(self):
-        self.feedforward()
-        return 1/self.out.shape[1]*np.sum((self.out-self.dftrain[self.y_vars].values.T)**2)
-
-    def error(self):
-        pass
 
 def gradientmethod():
     pass
