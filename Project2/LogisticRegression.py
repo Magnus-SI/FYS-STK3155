@@ -1,4 +1,4 @@
-from autograd import numpy as np
+import numpy as np
 from sklearn import datasets
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -33,8 +33,7 @@ class Logistic:
         """
         returns n-size vecor p with probabilities for the 1 outcome
         """
-        beta, X = self.beta, self.X[indices]
-        return sigmoid(beta[0]+np.sum(X*beta[1:],axis = 1))
+        return sigmoid(np.sum(self.X[indices]*self.beta,axis = 1))
 
     def cost(self,beta):
         """
@@ -49,8 +48,7 @@ class Logistic:
         """
         beta = self.beta
         p_vec = self.p(indices)
-        beta[0] += self.eta*np.sum(self.y[indices]-p_vec)
-        beta[1:] += self.eta*self.X[indices].T@(self.y[indices]-p_vec).T
+        beta += self.eta*self.X[indices].T@(self.y[indices]-p_vec).T
 
     def fit(self,X,y,N,eta,M=None):
         """
@@ -63,9 +61,15 @@ class Logistic:
         eta - learning rate
         M - minibatchsize
         """
-        self.X, self.y = X, y
         self.N, self.np = X.shape
-        self.beta = np.random.normal(size = self.np+1)
+        self.np += 1
+        self.X = np.ones(shape=(self.N,self.np))
+        self.X[:,1:] = X
+        if len(y.shape) == 2:
+            self.y = y[:,0]
+        elif len(y.shape) == 1:
+            self.y = y
+        self.beta = np.random.normal(size = self.np)
         if M == None:
             M_size = self.N
         elif M>self.N:
@@ -84,8 +88,8 @@ class Logistic:
                 ind = np.random.randint(n_M)
                 self.update_beta(minibatc_indices[ind])
             np.random.shuffle(self.indices)
-            self.X = X[self.indices]
-            self.y = y[self.indices]
+            self.X = self.X[self.indices]
+            self.y = self.y[self.indices]
         self.hasfit = True
 
 
@@ -98,8 +102,8 @@ if __name__ == '__main__':
     y_data = cancer.target
 
     N_train = 5000
-    model = Logistic(X_data,y_data)
-    model.fit(N_train,0.01,128)
+    model = Logistic()
+    model.fit(X_data,y_data,N_train,0.01,128)
 
     print(f"Training accuracy = {np.sum(np.round(model(X_data)) == y_data)/len(y_data)}")
     if np.all(np.round(model(X_data))>(1-1e-8)):
@@ -119,8 +123,8 @@ if __name__ == '__main__':
     X_test_noround = np.random.random((n_train,p))
     y_test_noround = np.array(X_test_noround>0.5).astype(float)[:,0]
 
-    test_model = Logistic(X_train,y_train)
-    test_model.fit(5000,0.01,128)
+    test_model = Logistic()
+    test_model.fit(X_train,y_train,5000,0.01,128)
 
     train_acc = np.sum(np.round(test_model(X_train)) == y_train)/len(y_train)
     test_acc = np.sum(np.round(test_model(X_test)) == y_test)/len(y_test)
