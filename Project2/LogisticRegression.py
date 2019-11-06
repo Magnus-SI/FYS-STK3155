@@ -52,8 +52,8 @@ class Logistic:
         """
         beta = self.beta
         p_vec = self.p(indices)
-        beta[0] += self.eta*np.sum(self.y[indices]-p_vec)/indices.size
-        beta[1:] += self.eta*self.X[indices].T@(self.y[indices]-p_vec).T/indices.size
+        beta[0] += self.eta*np.sum(self.y[indices]-p_vec)
+        beta[1:] += self.eta*self.X[indices].T@(self.y[indices]-p_vec).T
 
     def fit(self,N,eta,M=None):
         """
@@ -96,7 +96,7 @@ if __name__ == '__main__':
 
     N_train = 5000
     model = Logistic(X_data,y_data)
-    model.fit(N_train,0.01,100)
+    model.fit(N_train,0.01,128)
 
     print(f"Training accuracy = {np.sum(np.round(model(X_data)) == y_data)/len(y_data)}")
     if np.all(np.round(model(X_data))>(1-1e-8)):
@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
 
     n_train = 1000; p = 1
-    X_train = np.round(np.random.random((n_train,p)))
+    X_train = np.random.random((n_train,p))
     y_train = np.array(X_train>0.5).astype(float)[:,0]
 
     n_test = 1432
@@ -117,7 +117,7 @@ if __name__ == '__main__':
     y_test_noround = np.array(X_test_noround>0.5).astype(float)[:,0]
 
     test_model = Logistic(X_train,y_train)
-    test_model.fit(10000,0.01,100)
+    test_model.fit(5000,0.01,128)
 
     train_acc = np.sum(np.round(test_model(X_train)) == y_train)/len(y_train)
     test_acc = np.sum(np.round(test_model(X_test)) == y_test)/len(y_test)
@@ -149,8 +149,6 @@ if __name__ == '__main__':
     fig.tight_layout()
     plt.show()
     """
-
-
 
 
 
