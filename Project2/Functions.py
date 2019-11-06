@@ -43,3 +43,14 @@ class CrossEntropy:
 
     def derivative(self,x,target):
         return (x-target)/(x*(1-x))
+
+class Accuracy:
+    """
+    Should not be used as an actual cost function,since it has no good derivative
+    """
+    def __call__(self,x,target):
+        if len(target.shape) == 2:
+            y = target[:,0]
+        elif len(y.shape) == 1:
+            y = target
+        return np.count_nonzero(np.round(x)==y)/len(y)
