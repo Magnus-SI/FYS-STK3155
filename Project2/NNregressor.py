@@ -8,6 +8,7 @@ importlib.reload(NN)
 from NeuralNet import FFNN
 from Functions import MSE as NN_MSE
 from Functions import ReLU
+import matplotlib.pyplot as plt
 
 class FrankeNN(Project1):
     def __init__(self, seed = 2):
@@ -56,8 +57,52 @@ class FrankeNN(Project1):
             print("Choose from MSE or R2 as a cost function")
             sys.exit(1)
 
+    def multitrain(self,N, epN):
+        errs = np.zeros(N)
+        self.epochs = epN
+        for i in range(N):
+            errs[i] = self.kfolderr(method = FNN.FFNN.train)
+        print("Best R2: %.5f"%(np.max(errs)))
+        plt.figure()
+        plt.plot(np.arange(N)*epN, errs)
+        plt.xlabel("epoch")
+        plt.ylabel(self.cost)
+        plt.show()
+
+    def degvnoiseerr(self, polydegs, noises):
+        TestErrors = np.zeros((len(polydegs), len(noises)))
+        TrainErrors = np.zeros((len(polydegs), len(noises)))
+        showvals = True
+        for i,deg in enumerate(polydegs):
+            self.changepolydeg((deg,deg))
+            for j,noise in enumerate(noises):
+                self.changenoise(noisefraq=noise)
+                self.initNN([30,15], ReLU(0.01), ReLU(1.00), epochs=200, nbatches=10)
+                print(i,j)      #shows progress
+                TestErrors[i,j] = self.kfolderr(ks = np.arange(2,6), method = FNN.FFNN.train)
+                TrainErrors[i,j] = self.trainerr(method = FNN.FFNN.train)
+        f, axs = plt.subplots(2,1, figsize=(12,12))
+        ax1, ax2 = axs
+        h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',ax=ax1,xticklabels=np.around(np.log10(noises), 1), yticklabels=polydegs, vmin = 0.7, vmax = 1.0)
+        ax1.set_xlabel(r'$log_{10}(\sigma)$')
+        ax1.set_ylabel('Polynomial degree')
+        ax1.set_title(r'%s Test %s, #datapoints = %i$'%("FFNN",self.cost, int(self.N*self.frac)))
+        h2=sns.heatmap(data=TrainErrors,annot=showvals,cmap='viridis',ax=ax2,xticklabels=np.around(np.log10(noises), 1), yticklabels=polydegs, vmin = 0.7, vmax = 1.0)
+        ax2.set_xlabel(r'$log_{10}(\sigma)$')
+        ax2.set_ylabel('Polynomial degree')
+        ax2.set_title(r'%s Train %s'%("FFNN", self.cost))
+        plt.show()
+
 if __name__ == "__main__":
     FNN = FrankeNN()
-    FNN.gendat(500, noisefraq=0.05, Function = FrankeFunction, deg =(2,2), randpoints = True)
-    FNN.initNN(hlayers = [], activation = ReLU(0.01), outactivation = ReLU(1.00), epochs=10, nbatches = 5)
+    FNN.compnoisy = False
+    FNN.gendat(1000, noisefraq=1e-2, Function = FrankeFunction, deg =(6,6), randpoints = True)
+    FNN.initNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = ReLU(1.00), epochs=10, nbatches = 5)
+
+    polydegs = np.arange(1,15)
+    noises = np.logspace(-5,-1, 9)
+    FNN.cost = "R2"
+    #FNN.degvnoiseerr(polydegs, noises)
     kf = FNN.kfolderr(method = FNN.FFNN.train)
+    #FNN.cost = "R2"
+    FNN.multitrain(100,1)
