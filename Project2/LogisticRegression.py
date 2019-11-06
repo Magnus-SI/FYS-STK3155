@@ -9,17 +9,14 @@ def sigmoid(t):
 
 
 class Logistic:
-    def __init__(self,X,y):
+    def __init__(self):
         """
         Initialize with X and Y data, so far this assumes binary classification
         X has the dimensions n times p, where n is the number of datapoints
         and p is the number of predictors. y is a n-dimensional vector where each
         y-value corresponds to the row in X with the same index.
         """
-        self.X, self.y = X,y
-        self.N, self.np = X.shape
-        self.beta = np.random.normal(size = self.np+1)
-        self
+        self.hasfit = False
 
     def __call__(self,x):
         """
@@ -55,15 +52,20 @@ class Logistic:
         beta[0] += self.eta*np.sum(self.y[indices]-p_vec)
         beta[1:] += self.eta*self.X[indices].T@(self.y[indices]-p_vec).T
 
-    def fit(self,N,eta,M=None):
+    def fit(self,X,y,N,eta,M=None):
         """
         Fits the beta-coefficient
 
         The parameters (in order) are:
+        X - X data matrix
+        y - y data
         N - number of epochs
         eta - learning rate
         M - minibatchsize
         """
+        self.X, self.y = X, y
+        self.N, self.np = X.shape
+        self.beta = np.random.normal(size = self.np+1)
         if M == None:
             M_size = self.N
         elif M>self.N:
@@ -82,8 +84,9 @@ class Logistic:
                 ind = np.random.randint(n_M)
                 self.update_beta(minibatc_indices[ind])
             np.random.shuffle(self.indices)
-            self.X = self.X[self.indices]
-            self.y = self.y[self.indices]
+            self.X = X[self.indices]
+            self.y = y[self.indices]
+        self.hasfit = True
 
 
 if __name__ == '__main__':
