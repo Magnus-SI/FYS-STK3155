@@ -58,7 +58,8 @@ class FrankeNN(Project1):
             print("Choose from MSE or R2 as a cost function")
             sys.exit(1)
 
-    def multitrain(self,N, epN):
+    def multitrain(self,N, epN):        #actually uses some strange sort of spread training
+        self.FFNN.reset = False
         errs = np.zeros(N)
         self.epochs = epN
         for i in range(N):
@@ -69,6 +70,25 @@ class FrankeNN(Project1):
         plt.xlabel("epoch")
         plt.ylabel(self.cost)
         plt.show()
+
+    def multiepoch(self, polydeg, noise, epoch_arr):
+        deg = int(polydeg)
+        self.changenoise(noisefraq=noise)
+        self.changepolydeg(polydeg = (deg, deg))
+        errs = np.zeros(len(epoch_arr))
+        self.FFNN.reset = True
+        for i,epoch in enumerate(epoch_arr):
+            self.epochs = epoch
+            errs[i] = self.kfolderr(method = self.FFNN.fit)
+        plt.figure()
+        plt.title(r"$log10(\sigma)$=%.1f, polynomial order = $%i$"%(np.log10(noise), deg))
+        plt.plot(epoch_arr, errs)
+        plt.xlabel("epoch")
+        plt.ylabel("self.cost")
+        if self.cost == "MSE":
+            self.yscale("log")
+        plt.show()
+
 
     def degvnoiseerr(self, polydegs, noises):
         TestErrors = np.zeros((len(polydegs), len(noises)))
@@ -107,3 +127,4 @@ if __name__ == "__main__":
     kf = FNN.kfolderr(method = FNN.FFNN.fit)
     #FNN.cost = "R2"
     FNN.multitrain(100,1)
+    FNN.multiepoch()
