@@ -1,11 +1,16 @@
 import numpy as np
+import importlib
 from sklearn.decomposition import PCA
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import LogisticRegression as L
+importlib.reload(L)
 from LogisticRegression import Logistic
 from NeuralNet import FFNN
 from Functions import *
+import Analyze as a
+importlib.reload(a)
 from Analyze import ModelAnalysis
 
 class credlog(Logistic):
@@ -21,9 +26,9 @@ class ccdata:
         if adjust:
             self.adjust()
         if NN:
-            self.type = NN
+            self.type = "NN"
         else:
-            self.type = logreg
+            self.type = "logreg"
 
     def adjust(self):
         """
@@ -59,15 +64,16 @@ class ccdata:
         y = df['Y'].values
         X_vars = df.keys()[1:-1]
         X_vars = ['X2', 'X3', 'X6', 'X7']
-        y_vars = ['def', 'nodef']
 
-        if self.type==NN:
+        if self.type=="NN":
+            y_vars = ['def', 'nodef']
             df['def'] = (y==1)*1
             df['nodef'] = (y==0)*1
 
             return df, X_vars, y_vars
-        elif self.type == logreg:
-            pass
+        elif self.type == "logreg":
+            y_vars = ['Y']
+            return df, X_vars, y_vars
 
 if __name__ == "__main__":
     """
@@ -77,10 +83,6 @@ if __name__ == "__main__":
     N1.feedforward()
     print(N1.trainpredict(), N1.testpredict())
     """
-
-    df = pd.read_excel('ccdefaults.xls', skiprows = [1])
-    xstr = ['X'+str(i) for i in range(1,24)]
-    ystr = ['Y']
-    LogReg = Logistic()
-    LogAnalyze = ModelAnalysis(LogReg,df,xstr,ystr)
+    regloader = ccdata(NN = False)
+    LogAnalyze = ModelAnalysis(Logistic(), regloader)
     LogAnalyze.kfolderr(Accuracy(),5,1.0,1000,0.1,128)

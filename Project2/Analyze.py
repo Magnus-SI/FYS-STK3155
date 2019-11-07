@@ -2,15 +2,14 @@ import numpy as np
 import pandas as pd
 
 class ModelAnalysis:
-    def __init__(self,model,df,Xstr,ystr):
+    def __init__(self,model,loader):
         """
         model must have a 'fit'-function that takes X and y arrays
         Xsr and ystr are lists of strings such that df[X].values gives the X matrix
         and df[y].values gives the y-matrix
         """
         self.model = model
-        self.df = df
-        self.Xstr, self.ystr = Xstr,ystr
+        self.df, self.Xstr, self.ystr = loader()
 
     def kfoldsplit(self,k, df):
         """

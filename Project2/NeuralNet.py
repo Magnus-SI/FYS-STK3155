@@ -153,22 +153,22 @@ def gradientmethod():
 
 
 if __name__ == "__main__":
-    N1 = FFNN(hlayers = [100,50], activation = ReLU(0.01), outactivation = ReLU(1.00), cost = MSE(), loader = testlinreg)
-    N1.train(200, batches = 10)
-    N1.feedforward(test=True)
-    #print(N1.out)
-    print(N1.testpredreg(), N1.trainpredreg())
-
-    reg = MLPRegressor(hidden_layer_sizes = (100,50),
-                        solver = 'lbfgs',
-                        max_iter = 1000,
-                        tol = 1e-7,
-                        verbose = False)
-    reg.fit(N1.dftrain[N1.X_vars].values, N1.dftrain[N1.y_vars].values[:,0])
-    pred = reg.predict(N1.dftest[N1.X_vars].values)
-    print(1/len(pred) * np.sum((pred - N1.dftest[N1.y_vars].values[:,0])**2))
-    tpred = reg.predict(N1.dftrain[N1.X_vars].values)
-    print(1/len(tpred) * np.sum((tpred - N1.dftrain[N1.y_vars].values[:,0])**2))
+    # N1 = FFNN(hlayers = [100,50], activation = ReLU(0.01), outactivation = ReLU(1.00), cost = MSE(), loader = testlinreg)
+    # N1.train(200, batches = 10)
+    # N1.feedforward(test=True)
+    # #print(N1.out)
+    # print(N1.testpredreg(), N1.trainpredreg())
+    #
+    # reg = MLPRegressor(hidden_layer_sizes = (100,50),
+    #                     solver = 'lbfgs',
+    #                     max_iter = 1000,
+    #                     tol = 1e-7,
+    #                     verbose = False)
+    # reg.fit(N1.dftrain[N1.X_vars].values, N1.dftrain[N1.y_vars].values[:,0])
+    # pred = reg.predict(N1.dftest[N1.X_vars].values)
+    # print(1/len(pred) * np.sum((pred - N1.dftest[N1.y_vars].values[:,0])**2))
+    # tpred = reg.predict(N1.dftrain[N1.X_vars].values)
+    # print(1/len(tpred) * np.sum((tpred - N1.dftrain[N1.y_vars].values[:,0])**2))
 
 
     "Regression tests below:"
