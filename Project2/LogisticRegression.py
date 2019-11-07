@@ -18,7 +18,7 @@ class Logistic:
         """
         self.hasfit = False
 
-    def __call__(self,x):
+    def predict(self,x):
         """
         Returns the probability for y=1, given a matrix of X-values
         (can also be a vector)
@@ -126,9 +126,9 @@ if __name__ == '__main__':
     test_model = Logistic()
     test_model.fit(X_train,y_train,5000,0.01,128)
 
-    train_acc = np.sum(np.round(test_model(X_train)) == y_train)/len(y_train)
-    test_acc = np.sum(np.round(test_model(X_test)) == y_test)/len(y_test)
-    test_acc_noround = np.sum(np.round(test_model(X_test_noround)) == y_test_noround)/len(y_test_noround)
+    train_acc = np.sum(np.round(test_model.predict(X_train)) == y_train)/len(y_train)
+    test_acc = np.sum(np.round(test_model.predict(X_test)) == y_test)/len(y_test)
+    test_acc_noround = np.sum(np.round(test_model.predict(X_test_noround)) == y_test_noround)/len(y_test_noround)
 
     print(f"Training accuracy test model                = {train_acc:.3f}")
     print(f"Testing accuracy test model (with rounding) = {test_acc:.3f}")
@@ -156,6 +156,3 @@ if __name__ == '__main__':
     fig.tight_layout()
     plt.show()
     """
-
-
-

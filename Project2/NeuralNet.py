@@ -126,7 +126,7 @@ class FFNN:
             self.weights[-1-i] -= eta * delta[-1-i]@self.ah[-1-i].T/y.shape[0]
             self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 1)/y.shape[0]
 
-    def train(self, X, y, n_epochs, batches = 1):
+    def fit(self, X, y, n_epochs, batches = 1):
         allinds = np.arange(X.shape[0])
         batchinds = np.array_split(allinds, batches)
         for n in range(n_epochs):
@@ -134,6 +134,10 @@ class FFNN:
                 inds = batchinds[np.random.choice(range(batches))]
                 self.feedforward(X[inds])
                 self.backpropagate(y[inds])
+
+    def predict(self, X):
+        self.feedforward(X)
+        return self.out
 
     def predclass(self, X, y):
         self.feedforward(X)
@@ -154,10 +158,10 @@ def gradientmethod():
 
 if __name__ == "__main__":
     # N1 = FFNN(hlayers = [100,50], activation = ReLU(0.01), outactivation = ReLU(1.00), cost = MSE(), loader = testlinreg)
-    # N1.train(200, batches = 10)
+    # N1.fit(200, batches = 10)
     # N1.feedforward(test=True)
     # #print(N1.out)
-    # print(N1.testpredreg(), N1.trainpredreg())
+    # print(N1.testpredreg(), N1.fitpredreg())
     #
     # reg = MLPRegressor(hidden_layer_sizes = (100,50),
     #                     solver = 'lbfgs',
@@ -176,7 +180,7 @@ if __name__ == "__main__":
     # print("Fraction of correct guesses =", predscore)
     # N_test = len(N1.dftest[N1.y_vars].values)
     # print(f"{int(round(predscore*N_test)):d} correct out of {N_test} testing datapoints")
-    # print(f"Training accuracy = {N1.trainpredict()}")
+    # print(f"Training accuracy = {N1.fitpredict()}")
     """
     model = tf.keras.models.Sequential(
         [

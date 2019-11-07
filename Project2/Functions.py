@@ -54,3 +54,30 @@ class Accuracy:
         elif len(y.shape) == 1:
             y = target
         return np.count_nonzero(np.round(x)==y)/len(y)
+
+class FalseRate:
+    def __call__(self, x, target):
+        if len(target.shape) == 2:
+            y = target[:,0]
+            if len(x.shape) == 2:
+                x = x[0]
+        elif len(y.shape) == 1:
+            y = target
+            #x = x[0]
+        x = (x>0.5)*1
+        false_negative = np.sum((x-y)==-1)
+        false_positive = np.sum((x-y)==1)
+        true_positive = np.sum((x==1) * (y==1))
+        true_negative = np.sum((x==0) * (y==0))
+        print(false_negative, true_positive,  false_positive,  true_negative)
+        falseposrate = false_positive/(false_positive + true_negative)
+        falsenegrate = false_negative/(false_negative + true_positive)
+        return np.array([falseposrate, falsenegrate])
+
+
+class Accu2:
+    def __call__(self, x, target):
+        y = target.T
+        #print(x, y)
+        #import yyoeror
+        return np.count_nonzero((np.round(x)-y) == 0, axis=1)/y.shape[1]

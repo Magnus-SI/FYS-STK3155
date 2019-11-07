@@ -8,10 +8,13 @@ import LogisticRegression as L
 importlib.reload(L)
 from LogisticRegression import Logistic
 from NeuralNet import FFNN
+import Functions as F
+importlib.reload(F)
 from Functions import *
 import Analyze as a
 importlib.reload(a)
 from Analyze import ModelAnalysis
+from sklearn import preprocessing
 
 class credlog(Logistic):
     def __init__(self):
@@ -63,7 +66,15 @@ class ccdata:
         df = self.df
         y = df['Y'].values
         X_vars = df.keys()[1:-1]
-        X_vars = ['X2', 'X3', 'X6', 'X7']
+        npca = len(X_vars)#4
+        #pca = PCA(n_components = npca)
+        #Xnew = preprocessing.scale(pca.fit_transform(df[X_vars].values))
+        Xnew = preprocessing.scale(df[X_vars].values)
+        #X_vars = ['pca%i' for i in range(1,npca+1)]
+        for i in range(npca):
+            df[X_vars[i]] = Xnew[:,i]
+        X_vars = ['X1', 'X2', 'X3', 'X6', 'X7']
+        #df = preprocessing.scale(df)
 
         if self.type=="NN":
             y_vars = ['def', 'nodef']
@@ -83,6 +94,12 @@ if __name__ == "__main__":
     N1.feedforward()
     print(N1.trainpredict(), N1.testpredict())
     """
-    regloader = ccdata(NN = False)
-    LogAnalyze = ModelAnalysis(Logistic(), regloader)
-    LogAnalyze.kfolderr(Accuracy(),5,1.0,1000,0.1,128)
+    loader = ccdata(NN = False)
+    LogAnalyze = ModelAnalysis(Logistic(), loader)
+    LogAnalyze.kfolderr(FalseRate(),5,1.0,100,0.1,128)
+    loader.type = "NN"
+    NNmodel = FFNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = Softmax(), cost = CrossEntropy(), Xfeatures = 5, yfeatures = 2)
+    NNAnalyze = ModelAnalysis(NNmodel, loader)
+    n_epochs = 100; batches = 10
+    NNAnalyze.kfolderr(FalseRate(), 5, 1.0, n_epochs, batches)
+    #NNAnalyze.kfolderr(A)

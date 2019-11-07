@@ -49,7 +49,7 @@ class ModelAnalysis:
                 self.model.fit(dftrain[self.Xstr].values, dftrain[self.ystr].values, *args)
                 dftest = dfsplit[i]             #test data
                 #cost on test data
-                cost += costfunc(self.model(dftest[self.Xstr].values), dftest[self.ystr].values)
+                cost += costfunc(self.model.predict(dftest[self.Xstr].values), dftest[self.ystr].values)
                 counter+=1
                 print(f"k = {k}, run number {i+1}, cost = {cost/counter}")
         return cost/counter      #average of the cost function
@@ -62,5 +62,5 @@ class ModelAnalysis:
         """
         df = self.df.sample(frac = self.frac)
         self.model.fit(df[self.Xstr].values,df[self.ystr].values, *args)
-        cost = costfunc(self.model(df[self.Xstr].values),df[self.ystr].values)
+        cost = costfunc(self.model.predict(df[self.Xstr].values),df[self.ystr].values)
         return cost
