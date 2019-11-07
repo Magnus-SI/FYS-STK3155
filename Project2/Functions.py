@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.metrics import confusion_matrix
 
 class ReLU:
     def __init__(self, a):
@@ -73,6 +74,51 @@ class FalseRate:
         falseposrate = false_positive/(false_positive + true_negative)
         falsenegrate = false_negative/(false_negative + true_positive)
         return np.array([falseposrate, falsenegrate])
+
+class Cmat:
+    """
+    Uses scikit learns confusion matrix
+    returns array with TN, FP, FN, TP for binary
+    """
+    def __call__(self,x,target):
+        if len(target.shape) == 2:
+            y = target.flatten()
+        else:
+            y = target
+        if len(x.shape) == 2:
+            x = np.round(x.flatten())
+        else:
+            x = np.round(x)
+        return confusion_matrix(y,x).ravel()
+
+class Cmat_with_ignore:
+    """
+    Uses scikit learns confusion matrix
+    Can ignore all results within 50 +/- an interval (sigma)
+    (Treats these as too uncertain to classify)
+    sigma should be between 0 and 0.5
+    returns array with TN, FP, FN, TP and number of ignored datapoints
+    """
+    def __init__(self,sigma):
+        self.lb = 0.5-sigma # lower bound
+        self.ub = 0.5+sigma # upper bound
+
+    def __call__(self,x,target):
+        if len(target.shape) == 2:
+            y = target.flatten()
+        else:
+            y = target
+        if len(x.shape) == 2:
+            x = x.flatten()
+        true_arr = (x<self.lb) | (x>self.ub)
+        n_ignored = true_arr.size - np.count_nonzero(true_arr)
+        y = y[true_arr]
+        x = np.round(x[true_arr])
+        cmat = confusion_matrix(y,x).ravel()
+        return_arr = np.zeros(cmat.size+1)
+        return_arr[:-1] = cmat
+        return_arr[-1] = n_ignored
+        return return_arr
 
 
 class Accu2:

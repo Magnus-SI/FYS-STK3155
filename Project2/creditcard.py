@@ -1,6 +1,7 @@
 import numpy as np
 import importlib
 from sklearn.decomposition import PCA
+from sklearn.metrics import confusion_matrix
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -86,6 +87,22 @@ class ccdata:
             y_vars = ['Y']
             return df, X_vars, y_vars
 
+def save_results_latex(self,filename,results,format_types):
+    """
+    Adds result to filename, stored in latex table format
+    Results should be a list of numbers.
+    format_types should be string like "%.3f" that specifies how each
+    column sould be formatted
+    """
+    file = open(filename,'a')
+    string = ''
+    for i,number in enumerate(results):
+        string += "%s&"%(format_types[i])%(number)
+    string = string[:-1]
+    string += "\\\ \n \hline \n"
+    file.write(string)
+    file.close()
+
 if __name__ == "__main__":
     """
     ccd = ccdata(NN = True)
@@ -96,7 +113,7 @@ if __name__ == "__main__":
     """
     loader = ccdata(NN = False)
     LogAnalyze = ModelAnalysis(Logistic(), loader)
-    LogAnalyze.kfolderr(FalseRate(),5,1.0,100,0.1,128)
+    tn, fp, fn, tp, ni = LogAnalyze.kfolderr(Cmat_with_ignore(0.2),5,1.0,100,0.1,128)
     loader.type = "NN"
     NNmodel = FFNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = Softmax(), cost = CrossEntropy(), Xfeatures = 5, yfeatures = 2)
     NNAnalyze = ModelAnalysis(NNmodel, loader)

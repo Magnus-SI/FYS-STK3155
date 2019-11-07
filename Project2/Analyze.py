@@ -27,7 +27,7 @@ class ModelAnalysis:
                 costfunc,
                 ks=np.arange(2,6),\
                 frac = 1.0,\
-                *args):
+                *args, **kwargs):
         """
         Evaluates the kfold error
         ks: the values of k to split in
@@ -46,7 +46,8 @@ class ModelAnalysis:
             for i in range(len(dfsplit)):
                 dftrain = pd.concat(dfsplit[:i]+dfsplit[i+1:])  #training data
                 #fit with training data
-                self.model.fit(dftrain[self.Xstr].values, dftrain[self.ystr].values, *args)
+                #self.model.reset()
+                self.model.fit(dftrain[self.Xstr].values, dftrain[self.ystr].values, *args, **kwargs)
                 dftest = dfsplit[i]             #test data
                 #cost on test data
                 cost += costfunc(self.model.predict(dftest[self.Xstr].values), dftest[self.ystr].values)
