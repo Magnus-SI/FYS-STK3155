@@ -40,8 +40,9 @@ class FrankeNN(Project1):
             print("Error : run fit before testeval")
             sys.exit(1)
         inds = dftest.index
-        self.FFNN.feedforward(self.X[inds])
-        y_pred = self.FFNN.out[0]
+        # self.FFNN.feedforward(self.X[inds])
+        # y_pred = self.FFNN.out[0]
+        y_pred = self.FFNN.predict(self.X[inds])[0]
         if self.compnoisy:
             y = dftest['y']
         else:
@@ -61,7 +62,7 @@ class FrankeNN(Project1):
         errs = np.zeros(N)
         self.epochs = epN
         for i in range(N):
-            errs[i] = self.kfolderr(method = FNN.FFNN.train)
+            errs[i] = self.kfolderr(method = self.FFNN.fit)
         print("Best R2: %.5f"%(np.max(errs)))
         plt.figure()
         plt.plot(np.arange(N)*epN, errs)
@@ -79,8 +80,8 @@ class FrankeNN(Project1):
                 self.changenoise(noisefraq=noise)
                 self.initNN([30,15], ReLU(0.01), ReLU(1.00), epochs=200, nbatches=10)
                 print(i,j)      #shows progress
-                TestErrors[i,j] = self.kfolderr(ks = np.arange(2,6), method = FNN.FFNN.train)
-                TrainErrors[i,j] = self.trainerr(method = FNN.FFNN.train)
+                TestErrors[i,j] = self.kfolderr(ks = np.arange(2,6), method = FNN.FFNN.fit)
+                TrainErrors[i,j] = self.fiterr(method = FNN.FFNN.fit)
         f, axs = plt.subplots(2,1, figsize=(12,12))
         ax1, ax2 = axs
         h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',ax=ax1,xticklabels=np.around(np.log10(noises), 1), yticklabels=polydegs, vmin = 0.7, vmax = 1.0)
@@ -103,6 +104,6 @@ if __name__ == "__main__":
     noises = np.logspace(-5,-1, 9)
     FNN.cost = "R2"
     #FNN.degvnoiseerr(polydegs, noises)
-    kf = FNN.kfolderr(method = FNN.FFNN.train)
+    kf = FNN.kfolderr(method = FNN.FFNN.fit)
     #FNN.cost = "R2"
     FNN.multitrain(100,1)
