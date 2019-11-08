@@ -69,7 +69,7 @@ def testclassify():
 
 
 class FFNN:
-    def __init__(self, hlayers, activation, outactivation, cost, Xfeatures, yfeatures):
+    def __init__(self, hlayers, activation, outactivation, cost, Xfeatures, yfeatures, eta=0.1):
         """
         hlayers: list of hidden layer, e.g. [50, 20]
         """
@@ -77,7 +77,7 @@ class FFNN:
         self.NNinit(Xfeatures, yfeatures)
         self.activation = activation    #function
         self.outactivation = outactivation
-        self.eta = 0.1
+        self.eta = eta
         self.cost = cost # cost function
         self.ah = [0] * (len(hlayers)+1) # list of a-vectors
         self.zh = [0] * (len(hlayers)+1) # list of z-vectors
