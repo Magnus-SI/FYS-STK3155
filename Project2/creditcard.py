@@ -113,7 +113,8 @@ if __name__ == "__main__":
     """
     loader = ccdata(NN = False)
     LogAnalyze = ModelAnalysis(Logistic(), loader)
-    tn, fp, fn, tp, ni = LogAnalyze.kfolderr(Cmat_with_ignore(0.2),5,1.0,100,0.1,128)
+    tn, fp, fn, tp = LogAnalyze.kfolderr(Cmat(),ks = 5, frac = 1.0,N = 100,eta = 0.2,M = 128)
+    x_data, y_data = LogAnalyze.ROCcurve(N = 100, eta = 0.2, M = 128)
     loader.type = "NN"
     NNmodel = FFNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = Softmax(), cost = CrossEntropy(), Xfeatures = 5, yfeatures = 2)
     NNAnalyze = ModelAnalysis(NNmodel, loader)

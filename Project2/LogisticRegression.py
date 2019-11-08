@@ -61,15 +61,15 @@ class Logistic:
         eta - learning rate
         M - minibatchsize
         """
-        self.N, self.np = X.shape
-        self.np += 1
-        self.X = np.ones(shape=(self.N,self.np))
+        self.N, self.npred = X.shape
+        self.npred += 1
+        self.X = np.ones(shape=(self.N,self.npred))
         self.X[:,1:] = X
         if len(y.shape) == 2:
             self.y = y[:,0]
         elif len(y.shape) == 1:
             self.y = y
-        self.beta = np.random.normal(size = self.np)
+        self.beta = np.random.normal(size = self.npred)
         if M == None:
             M_size = self.N
         elif M>self.N:
@@ -91,6 +91,12 @@ class Logistic:
             self.X = self.X[self.indices]
             self.y = self.y[self.indices]
         self.hasfit = True
+
+    def reset(self):
+        """
+        Resets all beta valeus
+        """
+        self.beta = np.random.normal(size = self.npred)
 
 
 if __name__ == '__main__':

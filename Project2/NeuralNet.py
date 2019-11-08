@@ -82,7 +82,6 @@ class FFNN:
         self.ah = [0] * (len(hlayers)+1) # list of a-vectors
         self.zh = [0] * (len(hlayers)+1) # list of z-vectors
         self.delta = [0] * (len(hlayers)+1) # list of delta vectors
-        self.reset = True           #reset before each fit
 
     def NNinit(self, Xfeatures, yfeatures):
         self.Xf = int(Xfeatures); self.yf = int(yfeatures)
@@ -128,8 +127,7 @@ class FFNN:
             self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 1)/y.shape[0]
 
     def fit(self, X, y, n_epochs, batches = 1):
-        if self.reset:      #reset any previous fits
-            self.NNinit(self.Xf, self.yf)
+        self.reset()      #reset any previous fits
         allinds = np.arange(X.shape[0])
         batchinds = np.array_split(allinds, batches)
         for n in range(n_epochs):
@@ -152,6 +150,8 @@ class FFNN:
         self.feedforward(X)
         return 1/self.out.shape[1]*np.sum((self.out-y.T)**2)
 
+    def reset(self):
+        self.NNinit(self.Xf, self.yf)
 
 def gradientmethod():
     pass

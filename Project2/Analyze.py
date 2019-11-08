@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import scikitplot as skplt
 
 class ModelAnalysis:
     def __init__(self,model,loader):
@@ -34,7 +35,7 @@ class ModelAnalysis:
         method: the method to evaluate the error on
         self.frac: can be smaller than 1 if dataset is large
         self.cost: the cost function to evaluate k-fold with
-        *args extra arguments required by model.fit
+        *args and **kwargs are extra arguments required by model.fit
         """
         if type(ks) == int:
             ks = np.array([ks])
@@ -46,8 +47,8 @@ class ModelAnalysis:
             for i in range(len(dfsplit)):
                 dftrain = pd.concat(dfsplit[:i]+dfsplit[i+1:])  #training data
                 #fit with training data
-                #self.model.reset()
                 self.model.fit(dftrain[self.Xstr].values, dftrain[self.ystr].values, *args, **kwargs)
+                self.model.reset()
                 dftest = dfsplit[i]             #test data
                 #cost on test data
                 cost += costfunc(self.model.predict(dftest[self.Xstr].values), dftest[self.ystr].values)
@@ -65,3 +66,17 @@ class ModelAnalysis:
         self.model.fit(df[self.Xstr].values,df[self.ystr].values, *args)
         cost = costfunc(self.model.predict(df[self.Xstr].values),df[self.ystr].values)
         return cost
+
+    def ROCcurve(self,*args,**kwargs):
+        """
+        Returns x and y to plot the ROC curve
+        """
+        dfsplit = self.kfoldsplit(5,self.df)
+        dftrain = pd.concat(dfsplit[:4])
+        dftest = dfsplit[4]
+        self.model.reset()
+        self.model.fit(dftrain[self.Xstr].values, dftrain[self.ystr].values, *args, **kwargs)
+        target = dftest[self.ystr].values.flatten()
+        pred = self.model.predict(dftest[self.Xstr].values).flatten()
+        #skplt.metrics.plot_roc(target, pred)
+        return skplt.helpers.cumulative_gain_curve(target,pred)
