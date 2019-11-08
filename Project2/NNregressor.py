@@ -153,16 +153,18 @@ class FrankeNN(Project1):
                     print(i,j,k)
                     self.parachanger(labels[j], val)
                     #err_arr[k] = self.traintesterr(testerr = True)
-                    err_arr[k] = self.kfolderr(ks = np.array([5]), method = self.FFNN.fit)
+                    err_arr[k] = self.kfolderr(ks = np.array([4,5]), method = self.FFNN.fit)
                 optind = np.argmax(err_arr)
                 optinds[i,j] = optind
                 self.parachanger(labels[j], arr[optind])
             opterrs[i] = np.max(err_arr)
         optfin = optinds[-1]
-        print("Optimal values:")
+        #print("Optimal values:")
         for i,val in enumerate(optfin):
             self.parachanger(labels[i],arrs[i][val])
-            print(labels[i] + ": " + str(arrs[i][val]))
+            with open("opt%.2f.txt"%(np.log10(noise)), "a") as w:
+                w.write("\n")
+                w.write(labels[i] + ": " + str(arrs[i][val]))
         return optinds, opterrs
 
 
@@ -190,31 +192,41 @@ def optparaexplorer(Nloops, noise, epochs):
     FNN.initNN()
     FNN.cost = "R2"
 
-    eta_arr = np.array([0.1, 0.15, 0.2])#np.array([0.05, 0.1, 0.15, 0.2])
-    polydeg_arr = np.arange(1,15)
-    nbatch_arr = np.array([10, 15])
-    hlayer_arr = [[], [30], [30,15], [60,30,15]]
+    eta_arr = np.array([0.05, 0.1, 0.15, 0.2])#np.array([0.1, 0.15, 0.2])#np.array([0.05, 0.1, 0.15, 0.2])
+    polydeg_arr = np.arange(1,8)#np.arange(1,15)
+    nbatch_arr = np.array([1, 4, 10, 20])#np.array([10, 15])
+    hlayer_arr = [[], [30], [30,15], [60,30,15], [32,16,8]]
     relu_arr = np.array([0.005, 0.01, 0.015, 0.02])
-    inits = [0.15, 14, 5, [30,15], 0.01]
+    inits = [0.15, 5, 10, [30,15], 0.01]
     optinds, opterrs = FNN.optparafinder(Nloops, noise, epochs, eta_arr, polydeg_arr, nbatch_arr, hlayer_arr, relu_arr, inits)
     finopt = optinds[-1]
     return FNN,optinds, opterrs
 
+def multinoiseoptpara(noises, Nloops, epochs):
+    dats = []
+    for noise in noises:
+        dats.append(optparaexplorer(Nloops, noise, epochs))
+    return dats
+
 if __name__ == "__main__":
     pass
-    Nloops = 3
+    Nloops = 5
     noise = 3e-3
     epochs = 300
+    noises = np.logspace(-2.5,-0.5, 5)
+    dat = multinoiseoptpara(noises, Nloops, epochs)
     #FNN, optinds, opterrs = optparaexplorer(Nloops, noise, epochs)
-    FN1 = FrankeNN()
-    FN1.compnoisy = False
-    FN1.gendat(400, noisefraq=1e-2, Function = FrankeFunction, deg =(6,6), randpoints = True)
-    FN1.hlayers = [60,30,15]; FN1.activation = ReLU(0.005); FN1.outactivation = ReLU(1.00); FN1.epochs = 10; FN1.nbatches = 15; FN1.eta = 0.2
-    FN1.initNN()
-    FN1.cost = "R2"
-    degs = np.arange(1,6)
-    noises = np.logspace(-2.5,-0.5,5)
-    FN1.degvnoiseerr(degs, noises)
+    # FN1 = FrankeNN()
+    # FN1.compnoisy = False
+    # FN1.gendat(400, noisefraq=1e-2, Function = FrankeFunction, deg =(6,6), randpoints = True)
+    # FN1.hlayers = [60,30,15]; FN1.activation = ReLU(0.005); FN1.outactivation = ReLU(1.00); FN1.epochs = 10; FN1.nbatches = 15; FN1.eta = 0.2
+    # FN1.initNN()
+    # FN1.cost = "R2"
+    # #degs = np.arange(1,6)
+    # #noises = np.logspace(-2.5,-0.5,5)
+    # degs = np.array([1,2])
+    # noises = np.array([1e-1])
+    # FN1.degvnoiseerr(degs, noises)
 
     #
     # polydegs = np.arange(1,15)
