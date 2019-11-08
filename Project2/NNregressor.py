@@ -72,7 +72,7 @@ class FrankeNN(Project1):
             return self.testeval(dftrain)
 
     def multitrain(self,N, epN):        #actually uses some strange sort of spread training
-        self.FFNN.reset = False
+        self.FFNN.doreset = False
         errs = np.zeros(N)
         self.epochs = epN
         for i in range(N):
@@ -89,7 +89,7 @@ class FrankeNN(Project1):
         self.changenoise(noisefraq=noise)
         self.changepolydeg(polydeg = (deg, deg))
         errs = np.zeros(len(epoch_arr))
-        self.FFNN.reset = True
+        self.FFNN.doreset = True
         self.FFNN.Xf = self.X.shape[1]
         dftrain, dftest = np.split(self.df, [int(0.8*self.N)])
         for i,epoch in enumerate(epoch_arr):
@@ -110,23 +110,26 @@ class FrankeNN(Project1):
         TestErrors = np.zeros((len(polydegs), len(noises)))
         TrainErrors = np.zeros((len(polydegs), len(noises)))
         showvals = True
-        self.FFNN.reset = True
-        self.epochs = 200
+        self.FFNN.doreset = True
+        self.epochs = 1000
         for i,deg in enumerate(polydegs):
             self.changepolydeg((deg,deg))
+            self.initNN()
+
             for j,noise in enumerate(noises):
                 self.changenoise(noisefraq=noise)
                 print(i,j)      #shows progress
+
                 #TestErrors[i,j] = self.kfolderr(ks = np.arange(2,6), method = FNN.FFNN.fit)
-                TestErrors[i] = self.traintesterr()
+                TestErrors[i,j] = self.traintesterr()
                 TrainErrors[i,j] = self.traintesterr(testerr = False)#self.fiterr(method = FNN.FFNN.fit)
         f, axs = plt.subplots(2,1, figsize=(12,12))
         ax1, ax2 = axs
-        h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',ax=ax1,xticklabels=np.around(np.log10(noises), 1), yticklabels=polydegs, vmin = 0.7, vmax = 1.0)
+        h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',ax=ax1,xticklabels=np.around(np.log10(noises), 1), yticklabels=polydegs, vmin = 0.95, vmax = 1.0, fmt = '.3g')
         ax1.set_xlabel(r'$log_{10}(\sigma)$')
         ax1.set_ylabel('Polynomial degree')
         ax1.set_title(r'%s epochs %s Test %s, #datapoints = %i'%(self.epochs,"FFNN",self.cost, int(self.N*self.frac)))
-        h2=sns.heatmap(data=TrainErrors,annot=showvals,cmap='viridis',ax=ax2,xticklabels=np.around(np.log10(noises), 1), yticklabels=polydegs, vmin = 0.7, vmax = 1.0)
+        h2=sns.heatmap(data=TrainErrors,annot=showvals,cmap='viridis',ax=ax2,xticklabels=np.around(np.log10(noises), 1), yticklabels=polydegs, vmin = 0.95, vmax = 1.0, fmt = '.3g')
         ax2.set_xlabel(r'$log_{10}(\sigma)$')
         ax2.set_ylabel('Polynomial degree')
         ax2.set_title(r'%s epochs %s Train %s'%(self.epochs,"FFNN", self.cost))
@@ -138,7 +141,7 @@ class FrankeNN(Project1):
         for s,v in zip(labels,inits):
             self.parachanger(s, v)
         optvals = inits
-        self.FFNN.reset = True
+        self.FFNN.doreset = True
         self.changenoise(noise)
         self.epochs = epochs
         optinds = np.zeros((Nloops, len(labels))).astype(int)
@@ -156,8 +159,10 @@ class FrankeNN(Project1):
                 self.parachanger(labels[j], arr[optind])
             opterrs[i] = np.max(err_arr)
         optfin = optinds[-1]
+        print("Optimal values:")
         for i,val in enumerate(optfin):
             self.parachanger(labels[i],arrs[i][val])
+            print(labels[i] + ": " + str(arrs[i][val]))
         return optinds, opterrs
 
 
@@ -198,19 +203,24 @@ def optparaexplorer(Nloops, noise, epochs):
 if __name__ == "__main__":
     pass
     Nloops = 3
-    noise = 1e-2
-    epochs = 10
-    FNN, optinds, opterrs = optparaexplorer(Nloops, noise, epochs)
-    # FNN = FrankeNN()
-    # FNN.compnoisy = False
-    # FNN.gendat(1000, noisefraq=1e-2, Function = FrankeFunction, deg =(6,6), randpoints = True)
-    # FNN.hlayers = [30,15]; FNN.activation = ReLU(0.01); FNN.outactivation = ReLU(1.00); FNN.epochs = 10; FNN.nbatches = 5
-    # FNN.initNN()
+    noise = 3e-3
+    epochs = 300
+    #FNN, optinds, opterrs = optparaexplorer(Nloops, noise, epochs)
+    FN1 = FrankeNN()
+    FN1.compnoisy = False
+    FN1.gendat(400, noisefraq=1e-2, Function = FrankeFunction, deg =(6,6), randpoints = True)
+    FN1.hlayers = [60,30,15]; FN1.activation = ReLU(0.005); FN1.outactivation = ReLU(1.00); FN1.epochs = 10; FN1.nbatches = 15; FN1.eta = 0.2
+    FN1.initNN()
+    FN1.cost = "R2"
+    degs = np.arange(1,6)
+    noises = np.logspace(-2.5,-0.5,5)
+    FN1.degvnoiseerr(degs, noises)
+
     #
     # polydegs = np.arange(1,15)
     # noises = np.logspace(-5,-1, 9)
-    # FNN.cost = "R2"
-    # #FNN.degvnoiseerr(polydegs, noises)
+    # FN1.cost = "R2"
+    # #FN1.degvnoiseerr(polydegs, noises)
     # kf = FNN.kfolderr(method = FNN.FFNN.fit)
     #FNN.cost = "R2"
     #FNN.multitrain(50,1)

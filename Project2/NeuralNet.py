@@ -82,6 +82,7 @@ class FFNN:
         self.ah = [0] * (len(hlayers)+1) # list of a-vectors
         self.zh = [0] * (len(hlayers)+1) # list of z-vectors
         self.delta = [0] * (len(hlayers)+1) # list of delta vectors
+        self.doreset = True
 
     def NNinit(self, Xfeatures, yfeatures):
         self.Xf = int(Xfeatures); self.yf = int(yfeatures)
@@ -127,7 +128,8 @@ class FFNN:
             self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 1)/y.shape[0]
 
     def fit(self, X, y, n_epochs, batches = 1):
-        self.reset()      #reset any previous fits
+        if self.doreset:
+            self.reset()      #reset any previous fits
         allinds = np.arange(X.shape[0])
         batchinds = np.array_split(allinds, batches)
         for n in range(n_epochs):
