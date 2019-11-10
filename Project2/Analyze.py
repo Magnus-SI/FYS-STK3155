@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import scikitplot as skplt
+from sklearn import metrics
 
 class ModelAnalysis:
     def __init__(self,model,loader):
@@ -42,13 +43,15 @@ class ModelAnalysis:
         counter = 0
         cost = 0
         df = self.df.sample(frac=frac)     #same set of data used for all k-splits
+        if not self.model.hasfit:
+            self.model.fit(self.df[self.Xstr].values, self.df[self.ystr].values, *args, **kwargs)
         for k in ks:
             dfsplit = self.kfoldsplit(k, df)                        #split data
             for i in range(len(dfsplit)):
                 dftrain = pd.concat(dfsplit[:i]+dfsplit[i+1:])  #training data
                 #fit with training data
-                self.model.fit(dftrain[self.Xstr].values, dftrain[self.ystr].values, *args, **kwargs)
                 self.model.reset()
+                self.model.fit(dftrain[self.Xstr].values, dftrain[self.ystr].values, *args, **kwargs)
                 dftest = dfsplit[i]             #test data
                 #cost on test data
                 cost += costfunc(self.model.predict(dftest[self.Xstr].values), dftest[self.ystr].values)
@@ -67,16 +70,43 @@ class ModelAnalysis:
         cost = costfunc(self.model.predict(df[self.Xstr].values),df[self.ystr].values)
         return cost
 
-    def ROCcurve(self,*args,**kwargs):
+    def ROCcurve(self,N_run,*args,**kwargs):
         """
-        Returns x and y to plot the ROC curve
+        Returns FP, TP, thresholds and the area under the ROC curve
         """
+
         dfsplit = self.kfoldsplit(5,self.df)
         dftrain = pd.concat(dfsplit[:4])
         dftest = dfsplit[4]
-        self.model.reset()
-        self.model.fit(dftrain[self.Xstr].values, dftrain[self.ystr].values, *args, **kwargs)
-        target = dftest[self.ystr].values.flatten()
-        pred = self.model.predict(dftest[self.Xstr].values).flatten()
-        #skplt.metrics.plot_roc(target, pred)
-        return skplt.helpers.cumulative_gain_curve(target,pred)
+
+        auc = 0
+        fpr = np.linspace(0,1,1000)
+        tpr = []
+        for i in range(N_run):
+            print(f"Test split {i+1} of {N_run}")
+            self.model.reset()
+            self.model.fit(dftrain[self.Xstr].values, dftrain[self.ystr].values, *args, **kwargs)
+            target = dftest[self.ystr].values
+            pred = self.model.predict(dftest[self.Xstr].values)
+
+            if len(pred.shape) == 2:
+                ind = np.argmax(pred.shape)
+                if ind == 0:
+                    pred = pred[:,0]
+                else:
+                    pred = pred[0,:]
+            if len(target.shape) == 2:
+                ind = np.argmax(target.shape)
+                if ind == 0:
+                    target = target[:,0]
+                else:
+                    target = target[0,:]
+            values = metrics.roc_curve(target,pred)
+            tpr.append(np.interp(fpr,values[0],values[1]))
+            auc += metrics.auc(values[0], values[1])
+            dfsplit = self.kfoldsplit(5,self.df)
+            dftrain = pd.concat(dfsplit[:4])
+            dftest = dfsplit[4]
+        tpr = np.mean(tpr,axis = 0)
+        auc /= N_run
+        return fpr, tpr, auc
