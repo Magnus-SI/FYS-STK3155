@@ -113,11 +113,37 @@ if __name__ == "__main__":
     """
     loader = ccdata(NN = False)
     LogAnalyze = ModelAnalysis(Logistic(), loader)
-    tn, fp, fn, tp = LogAnalyze.kfolderr(Cmat(),ks = 5, frac = 1.0,N = 100,eta = 0.2,M = 128)
-    x_data, y_data = LogAnalyze.ROCcurve(N = 100, eta = 0.2, M = 128)
+    N_epochs = 10
+    Ltn, Lfp, Lfn, Ltp = LogAnalyze.kfolderr(Cmat(),ks = 5, frac = 1.0,N = N_epochs,eta = 0.2,M = 128)
+    print(f"Results Logistic Regression (with {N_epochs} epochs):\
+        \nTrue negative  : {Ltn}\
+        \nFalse positive : {Lfp}\
+        \nFalse negative : {Lfn}\
+        \nTrue positie   : {Ltp}")
+    Lx_data, Ly_data, LAUC= LogAnalyze.ROCcurve(N_run = 10, N = 1000, eta = 0.1, M = 128)
+
     loader.type = "NN"
     NNmodel = FFNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = Softmax(), cost = CrossEntropy(), Xfeatures = 5, yfeatures = 2)
     NNAnalyze = ModelAnalysis(NNmodel, loader)
-    n_epochs = 100; batches = 10
-    NNAnalyze.kfolderr(FalseRate(), 5, 1.0, n_epochs, batches)
+    batch_size = 128
+    batch_number = 100
+    NNtn, NNfp, NNfn, NNtp = NNAnalyze.kfolderr(CmatNN(),ks = 5, frac = 1.0,n_epochs = N_epochs,eta = 0.2,batches = batch_number)
+    print(f"Results Neural Network (with {N_epochs} epochs):\
+        \nTrue negative  : {NNtn}\
+        \nFalse positive : {NNfp}\
+        \nFalse negative : {NNfn}\
+        \nTrue positie   : {NNtp}")
+    NNx_data, NNy_data, NNAUC = NNAnalyze.ROCcurve(N_run= 10,n_epochs = 1000, eta = 0.1, batches = batch_number)
+
+    plt.figure()
+    plt.plot(Lx_data,Ly_data,label="Logistic Regression")
+    plt.plot(NNx_data,NNy_data,label="Neural Network")
+    plt.xlabel("False positive rate")
+    plt.ylabel("True positive rate")
+    plt.legend()
+    plt.show()
+
+    n_epochs = 10
+
+    NNAnalyze.kfolderr(FalseRate(), 5, 1.0, n_epochs, batches = batch_number, eta = 0.2)
     #NNAnalyze.kfolderr(A)
