@@ -3,8 +3,6 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import sklearn as skl
 from sklearn import datasets
-from autograd import elementwise_grad as egrad
-from autograd import jacobian, grad
 import tensorflow as tf
 from Functions import MSE, ReLU, Softmax, Sigmoid
 from numpy.polynomial.polynomial import polyvander2d
@@ -69,7 +67,7 @@ def testclassify():
 
 
 class FFNN:
-    def __init__(self, hlayers, activation, outactivation, cost, Xfeatures, yfeatures, eta=0.1):
+    def __init__(self, hlayers, activation, outactivation, cost, Xfeatures, yfeatures,eta = 0.1):
         """
         hlayers: list of hidden layer, e.g. [50, 20]
         """
@@ -77,12 +75,12 @@ class FFNN:
         self.NNinit(Xfeatures, yfeatures)
         self.activation = activation    #function
         self.outactivation = outactivation
-        self.eta = eta
         self.cost = cost # cost function
         self.ah = [0] * (len(hlayers)+1) # list of a-vectors
         self.zh = [0] * (len(hlayers)+1) # list of z-vectors
         self.delta = [0] * (len(hlayers)+1) # list of delta vectors
         self.doreset = True
+        self.eta = eta
 
     def NNinit(self, Xfeatures, yfeatures):
         self.Xf = int(Xfeatures); self.yf = int(yfeatures)
@@ -98,6 +96,7 @@ class FFNN:
 
         self.biass = [np.ones((layers[i])).T*0.01
                         for i in range(1, self.N_layers+1)]
+        self.hasfit = True
 
 
     def feedforward(self, X):
@@ -127,11 +126,12 @@ class FFNN:
             self.weights[-1-i] -= eta * delta[-1-i]@self.ah[-1-i].T/y.shape[0]
             self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 1)/y.shape[0]
 
-    def fit(self, X, y, n_epochs, batches = 1):
+    def fit(self, X, y, n_epochs, eta, batches = 1):
         if self.doreset:
             self.reset()      #reset any previous fits
         allinds = np.arange(X.shape[0])
         batchinds = np.array_split(allinds, batches)
+        self.eta = eta
         for n in range(n_epochs):
             for j in range(batches):
                 inds = batchinds[np.random.choice(range(batches))]
