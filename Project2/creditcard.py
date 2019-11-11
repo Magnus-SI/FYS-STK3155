@@ -43,7 +43,7 @@ class ccdata:
         Ts = np.ones((23,len(df)))
         Ts[1] = (df['X2'].values == 1) + (df['X2'].values == 2)
         Ts[2] = (df['X3'].values == 1) + (df['X3'].values == 2)\
-            +(df['X3'].values == 3) + (df['X2'].values == 4)
+            +(df['X3'].values == 3) #+ (df['X2'].values == 4)
         Ts[3] = (df['X4'].values == 1) + (df['X4'].values == 2)\
             +(df['X4'].values == 3)
 
@@ -52,13 +52,33 @@ class ccdata:
             for j in range(-2,10):
                 t+=df['X%i'%i].values == j
             Ts[i-1] = t
+
         T = np.prod(Ts, axis=0)
-        self.df = df[T.astype(bool)]
-        self.df = self.df.sample(frac = 1.0)
+        df = df[T.astype(bool)]
+        df = df.sample(frac = 1.0)
+
+        weights = np.array([0.4, 0.3, 0.15, 0.08, 0.05, 0.02])
+        new1 = np.sum(df[["X%i"%i for i in range(6,12)]].values * weights, axis = 1)
+        new2 = (df['X2'].values - 1)*2 - 1
+        newT = df['X3'].values == 3
+        new3 = (df['X3'].values - 1)*2 - 1
+        new3[newT] = 0
+        new4 = np.sum(df[["X%i"%i for i in range(18,24)]].values * weights, axis = 1)
+        new4 = (new4 - np.mean(new4))/np.std(new4)
+        new5 = df['X1'].values
+        new5 = (new5-np.mean(new5))/np.std(new5)
+
+        df['gender'] = new2
+        df['education'] = new3
+        df['payhist'] = new1
+        df['prevpay'] = new4
+        df['credit'] = new5
+        self.df = df
+        self.X_vars = ['credit', 'gender', 'education', 'payhist', 'prevpay']
 
     def corrplot(self):
         df = self.df
-        vars = df.keys()[1:]
+        vars = self.X_vars + ['Y']#df.keys()[1:]
         dat = df[vars].values
         corr = np.corrcoef(dat.T).round(2)
         sns.heatmap(data = corr, annot = True, cmap = 'viridis', xticklabels = vars, yticklabels = vars)
@@ -66,15 +86,15 @@ class ccdata:
     def __call__(self):
         df = self.df
         y = df['Y'].values
-        X_vars = df.keys()[1:-1]
-        npca = len(X_vars)#4
+        X_vars = self.X_vars#df.keys()[1:-1]
+        #npca = 4#len(X_vars)#4
         #pca = PCA(n_components = npca)
         #Xnew = preprocessing.scale(pca.fit_transform(df[X_vars].values))
-        Xnew = preprocessing.scale(df[X_vars].values)
-        #X_vars = ['pca%i' for i in range(1,npca+1)]
-        for i in range(npca):
-            df[X_vars[i]] = Xnew[:,i]
-        X_vars = ['X1', 'X2', 'X3', 'X6', 'X7']
+        #Xnew = preprocessing.scale(df[X_vars].values)
+        # X_vars = ['pca%i'%i for i in range(1,npca+1)]
+        # for i in range(npca):
+        #     df[X_vars[i]] = Xnew[:,i]
+        #X_vars = ['X1', 'X2', 'X3', 'X6', 'X7']
         #df = preprocessing.scale(df)
 
         if self.type=="NN":
@@ -113,14 +133,14 @@ if __name__ == "__main__":
     """
     loader = ccdata(NN = False)
     LogAnalyze = ModelAnalysis(Logistic(), loader)
-    N_epochs = 10
+    N_epochs = 100
     Ltn, Lfp, Lfn, Ltp = LogAnalyze.kfolderr(Cmat(),ks = 5, frac = 1.0,N = N_epochs,eta = 0.2,M = 128)
     print(f"Results Logistic Regression (with {N_epochs} epochs):\
         \nTrue negative  : {Ltn}\
         \nFalse positive : {Lfp}\
         \nFalse negative : {Lfn}\
         \nTrue positie   : {Ltp}")
-    Lx_data, Ly_data, LAUC= LogAnalyze.ROCcurve(N_run = 10, N = 1000, eta = 0.1, M = 128)
+    Lx_data, Ly_data, LAUC= LogAnalyze.ROCcurve(N_run = 3, N = 1000, eta = 0.1, M = 128)
 
     loader.type = "NN"
     NNmodel = FFNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = Softmax(), cost = CrossEntropy(), Xfeatures = 5, yfeatures = 2)
@@ -133,7 +153,7 @@ if __name__ == "__main__":
         \nFalse positive : {NNfp}\
         \nFalse negative : {NNfn}\
         \nTrue positie   : {NNtp}")
-    NNx_data, NNy_data, NNAUC = NNAnalyze.ROCcurve(N_run= 10,n_epochs = 1000, eta = 0.1, batches = batch_number)
+    NNx_data, NNy_data, NNAUC = NNAnalyze.ROCcurve(N_run= 3,n_epochs = 1000, eta = 0.1, batches = batch_number)
 
     plt.figure()
     plt.plot(Lx_data,Ly_data,label="Logistic Regression")
@@ -143,7 +163,7 @@ if __name__ == "__main__":
     plt.legend()
     plt.show()
 
-    n_epochs = 10
-
-    NNAnalyze.kfolderr(FalseRate(), 5, 1.0, n_epochs, batches = batch_number, eta = 0.2)
+    # n_epochs = 100
+    #
+    # NNAnalyze.kfolderr(FalseRate(), 5, 1.0, n_epochs, batches = batch_number, eta = 0.2)
     #NNAnalyze.kfolderr(A)
