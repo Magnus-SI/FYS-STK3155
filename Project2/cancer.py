@@ -74,8 +74,41 @@ if __name__ == "__main__":
     # wat = LogAnalyze.kfolderr(Accuracy(), ks = np.arange(2,6), frac = 1.0, N = 1000, eta = 0.2, M = 20)
 
     #loader.type = "NN"
+
+    loader = cancerdata(NN = False)
+    LogAnalyze = ModelAnalysis(Logistic(), loader)
+    tn, fp, fn, tp = LogAnalyze.kfolderr(Cmat(),ks = 5, frac = 1.0,N = 1000,eta = 0.2,M = 128)
+    print(f"Results Logistic Regression:\
+        \nTrue negative  : {tn}\
+        \nFalse positive : {fp}\
+        \nFalse negative : {fn}\
+        \nTrue positie   : {tp}")
+    Lx_data, Ly_data, LAUC = LogAnalyze.ROCcurve(N_run= 10, N = 1000, eta = 0.2, M = 128)
+
+    loader.type = "NN"
     NNmodel = FFNN(hlayers = [30], activation = ReLU(0.01), outactivation = Softmax(),
-                     cost = CrossEntropy(), Xfeatures = loader.Xf, yfeatures = loader.yf, eta = 0.1)
+                     cost = CrossEntropy(), Xfeatures = loader.Xf, yfeatures = loader.yf)
+    NNAnalyze = ModelAnalysis(NNmodel, loader)
+
+
+    batch_number = 10
+    NNtn, NNfp, NNfn, NNtp = NNAnalyze.kfolderr(CmatNN(),ks = 5, frac = 1.0,n_epochs = 10,eta = 0.2,batches = batch_number)
+    print(f"Results Neural Network:\
+        \nTrue negative  : {NNtn}\
+        \nFalse positive : {NNfp}\
+        \nFalse negative : {NNfn}\
+        \nTrue positie   : {NNtp}")
+
+    NNx_data, NNy_data, NNAUC = NNAnalyze.ROCcurve(N_run= 10, n_epochs = 100, eta = 0.2, batches = batch_number)
+
+    plt.figure()
+    plt.plot(Lx_data,Ly_data,label="Logistic Regression")
+    plt.plot(NNx_data,NNy_data,label="Neural Network")
+    plt.xlabel("False positive rate")
+    plt.ylabel("True positive rate")
+    plt.legend()
+    plt.show()
+
     # NNmodel.doreset = True
     # NNAnalyze = ModelAnalysis(NNmodel, loader)
     n_epochs = 100; batches = 10
@@ -84,13 +117,14 @@ if __name__ == "__main__":
     dftrain, dftest = np.split(df, [int(0.8*len(df))])
     xtrain = dftrain[Xv].values; xtest = dftest[Xv].values
     ytrain = dftrain[yv].values; ytest = dftest[yv].values
-    NNmodel.fit(xtrain, ytrain, n_epochs, batches)
+    NNmodel.fit(xtrain, ytrain, n_epochs, 0.2, batches)
     ypred = np.round(NNmodel.predict(xtest))
     y = dftest[yv].values
     Lmodel = Logistic()
     Lmodel.fit(xtrain, ytrain, n_epochs, 0.1, 10)
     Lpred = np.round(Lmodel.predict(xtest))
     F = FalseRate()
-    print(F(Lpred, y))
+    print("Logistic cmat result", Cmat()(Lpred,y))
+    print("False rate logistic = ", F(Lpred, y))
     print(F(ypred, y))
     #NNAnalyze.kfolderr(A)
