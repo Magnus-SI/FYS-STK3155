@@ -48,7 +48,7 @@ class Logistic:
         """
         beta = self.beta
         p_vec = self.p(indices)
-        beta += self.eta*self.X[indices].T@(self.y[indices]-p_vec).T
+        beta += self.eta*self.X[indices].T@(self.y[indices]-p_vec).T/indices.size
 
     def fit(self,X,y,N,eta,M=None):
         """
