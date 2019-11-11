@@ -158,9 +158,11 @@ if __name__ == "__main__":
     plt.figure()
     plt.plot(Lx_data,Ly_data,label="Logistic Regression")
     plt.plot(NNx_data,NNy_data,label="Neural Network")
+    plt.plot([0,1],[0,1],'k--', label = "Baseline")
     plt.xlabel("False positive rate")
     plt.ylabel("True positive rate")
     plt.legend()
+    plt.savefig("ROC.pdf")
     plt.show()
 
     # n_epochs = 100
