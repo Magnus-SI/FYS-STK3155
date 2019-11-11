@@ -126,12 +126,14 @@ class FFNN:
             self.weights[-1-i] -= eta * delta[-1-i]@self.ah[-1-i].T/y.shape[0]
             self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 1)/y.shape[0]
 
-    def fit(self, X, y, n_epochs, eta, batches = 1):
+    def fit(self, X, y, n_epochs, batches = 1, eta = None):
         if self.doreset:
             self.reset()      #reset any previous fits
+        if eta is not None:
+            self.eta = eta    #reset eta
         allinds = np.arange(X.shape[0])
         batchinds = np.array_split(allinds, batches)
-        self.eta = eta
+
         for n in range(n_epochs):
             for j in range(batches):
                 inds = batchinds[np.random.choice(range(batches))]
