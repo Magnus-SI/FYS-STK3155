@@ -60,9 +60,7 @@ class ccdata:
         weights = np.array([0.4, 0.3, 0.15, 0.08, 0.05, 0.02])
         new1 = np.sum(df[["X%i"%i for i in range(6,12)]].values * weights, axis = 1)
         new2 = (df['X2'].values - 1)*2 - 1
-        newT = df['X3'].values == 3
-        new3 = (df['X3'].values - 1)*2 - 1
-        new3[newT] = 0
+        new3 = df['X3'].values - 2
         new4 = np.sum(df[["X%i"%i for i in range(18,24)]].values * weights, axis = 1)
         new4 = (new4 - np.mean(new4))/np.std(new4)
         new5 = df['X1'].values
