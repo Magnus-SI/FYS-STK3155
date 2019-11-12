@@ -10,37 +10,58 @@ from Functions import MSE as NN_MSE
 from Functions import ReLU
 import matplotlib.pyplot as plt
 
-class FrankeNN(Project1):
+class FrankeNN(Project1):       #inherits some functinos from the Project1 class
     def __init__(self, seed = 2):
+        """
+        Sets various parameters describing the data analysis, and the FFNN model within
+        this class. These parameters can later be changed.
+        seed: if specific random seed is desired
+        """
         np.random.seed(seed)
-        self.data = False
-        self.hasfit = False
-        self.compnoisy = True
-        self.cost = "MSE"
-        self.frac = 1.0
-        self.noexact = False
-        self.activation = ReLU(0.01)
-        self.outactivation = ReLU(1.00)
-        self.hlayers = [30,15]
-        self.eta = 0.1
-        self.epochs = 1000
-        self.nbatches = 10
+        self.data = False       #data has not yet been generated
+        self.hasfit = False     #a fit has not yet been made
+        self.compnoisy = True   #compare to noisy/not noisy data when evaluating error
+        self.cost = "MSE"       #cost function to use
+        self.frac = 1.0         #fraction of data to use
+        self.noexact = False    #True if no exact solution
+        self.activation = ReLU(0.01)        #activation function on hidden layers of FFNN
+        self.outactivation = ReLU(1.00)     #activation function on output node of FFNN
+        self.hlayers = [30,15]              #hidden layers
+        self.eta = 0.1                      #learning rate
+        self.epochs = 1000                  #epochs
+        self.nbatches = 10                  #batches for SGD
         #self.initNN()
 
     def initNN(self):
+        """
+        Initializes the NN based on the current count of features in self.X, along
+        with the parameters initialized with the class.
+        self.FFNN is the class containing the neural network.
+        """
         Xfeatures = self.X.shape[1]
         yfeatures = 1
         self.FFNN = FFNN(self.hlayers, self.activation, self.outactivation, NN_MSE(), Xfeatures, yfeatures, self.eta)
+        self.FFNN.doreset = True            #reset after each fit
 
     def fit(self, method, df):
+        """
+        fits the data in df using a given method.
+        method: method to fit, in this case, this will be self.FFNN.fit. It is made generally to
+        acommodate for the present functions inherited from the Project1 class.
+        df: the dataframe containing the y-values to compare to.
+        """
         y = df['y'].values
         #print(y)
-        yext = y[np.newaxis].T
+        yext = y[np.newaxis].T      #y must be (n,1) for the NN to work
         inds = df.index
         method(self.X[inds], yext, self.epochs, self.nbatches)
         self.hasfit = True
 
     def testeval(self, dftest):
+        """
+        Evaluates the cost on the given dataframe dftest.
+        dftest: dataframe containing the test data
+        """
         if not self.hasfit:
             print("Error : run fit before testeval")
             sys.exit(1)
@@ -48,10 +69,10 @@ class FrankeNN(Project1):
         # self.FFNN.feedforward(self.X[inds])
         # y_pred = self.FFNN.out[0]
         y_pred = self.FFNN.predict(self.X[inds])[0]
-        if self.compnoisy:
+        if self.compnoisy:      #compare to noisy data
             y = dftest['y']
         else:
-            y = dftest['y_exact']
+            y = dftest['y_exact']       #compare to exact data
         N = len(y)
         if self.cost == "MSE":
             MSE = 1/N * np.sum((y_pred - y)**2)
@@ -64,6 +85,13 @@ class FrankeNN(Project1):
             sys.exit(1)
 
     def traintesterr(self, trainfrac = 0.8, testerr = True):
+        """
+        performs a train test split and calculates the error
+        trainfrac:  fraction of data to use for training
+        testerr: if True, evaluate on test data, if False evaluate error on train data
+        """
+
+
         dftrain, dftest = np.split(self.df, [int(0.8*self.N)])
         self.fit(self.FFNN.fit, dftrain)
         if testerr:
@@ -72,6 +100,12 @@ class FrankeNN(Project1):
             return self.testeval(dftrain)
 
     def multitrain(self,N, epN):        #actually uses some strange sort of spread training
+        """
+        Performs N loops of epN epochs of training per loop, evaluating the progression
+        of the error as for more epochs. The fit is not reset, so due to the k-fold error,
+        this issues some form of spread training, which is not exactly suitable to calculate
+        train test error, but allows for the fastest convergence, to measure optimal fit.
+        """
         self.FFNN.doreset = False
         errs = np.zeros(N)
         self.epochs = epN
@@ -94,12 +128,12 @@ class FrankeNN(Project1):
         dftrain, dftest = np.split(self.df, [int(0.8*self.N)])
         for i,epoch in enumerate(epoch_arr):
             self.epochs = int(epoch)
-            #errs[i] = self.kfolderr(method = self.FFNN.fit)
-            errs[i] = self.traintesterr(testerr = False)
+            errs[i] = self.kfolderr(method = self.FFNN.fit)
+            #errs[i] = self.traintesterr(testerr = False)
         if newplot:
             plt.figure()
-        plt.title(r"$log10(\sigma)$=%.1f, polynomial order = $%i$"%(np.log10(noise), deg))
-        plt.plot(epoch_arr, errs, label = r"$\eta$ = %.3f"%self.eta)
+        plt.title(r"400 data points, $\eta = %.2f$"%(self.eta))
+        plt.plot(epoch_arr, errs, label = r"$log_{10}(\hat{\sigma})$=%.1f"%np.log10(noise))
         plt.xlabel("epoch")
         plt.ylabel("%s"%self.cost)
         if self.cost == "MSE":
@@ -265,21 +299,19 @@ def optparainstance():
     end = time()
     return dat, (end-start)
 
-def convergencefind(etas, noise, polydeg):
+def convergencefind(noises, polydeg):
     FNN = FrankeNN()
     FNN.compnoisy = False
-    FNN.gendat(400, noisefraq = noise, Function = FrankeFunction, deg = (4,4), randpoints = True)
-    FNN.hlayers = [30,15]; FNN.activation = ReLU(0.01); FNN.outactivation = ReLU(1.00)
-    FNN.epochs = 10; FNN.nbatches = 10; FNN.eta = 0.1
+    FNN.gendat(400, noisefraq = 1e-2, Function = FrankeFunction, deg = (4,4), randpoints = True)
+    FNN.hlayers = [60,30,15]; FNN.activation = ReLU(0.01); FNN.outactivation = ReLU(1.00)
+    FNN.epochs = 10; FNN.nbatches = 15; FNN.eta = 0.3
     FNN.initNN()
     FNN.cost = "MSE"
     #epoch_arr = np.array([10, 30, 100, 300])
     epoch_arr = np.logspace(1,4, 7)
     plt.figure()
-    for eta in etas:
+    for noise in noises:
         print("yo")
-        FNN.eta = eta
-        FNN.parachanger('eta', eta)
         FNN.multiepoch(polydeg, noise, epoch_arr, newplot = False)
     plt.xscale("log")
     plt.legend()
@@ -357,6 +389,8 @@ if __name__ == "__main__":
     FN1.epochs = 500; FN1.nbatches = 15; FN1.eta = 0.2
     FN1.cost = "R2"
     FN1.initNN()
+
+    #convergencefind(np.logspace(-2, -0.5, 4), 4)
     #FN1.biasvar(10, np.arange(1,12))
     # FN1.cost = "R2"
     # #degs = np.arange(1,6)

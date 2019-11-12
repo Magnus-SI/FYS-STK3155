@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-import scikitplot as skplt
+#import scikitplot as skplt
 from sklearn import metrics
 
 class ModelAnalysis:
