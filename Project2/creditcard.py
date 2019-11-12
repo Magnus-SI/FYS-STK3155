@@ -105,12 +105,12 @@ class ccdata:
             y_vars = ['Y']
             return df, X_vars, y_vars
 
-def save_results_latex(self,filename,results,format_types):
+def save_results_latex(filename,results,format_types):
     """
     Adds result to filename, stored in latex table format
-    Results should be a list of numbers.
-    format_types should be string like "%.3f" that specifies how each
-    column sould be formatted
+    results should be a list of printable results.
+    format_types should be strings like "%.3f" that specifies how each column sould be formatted.
+    These strings should be in a list, or another iterable structure
     """
     file = open(filename,'a')
     string = ''
@@ -129,15 +129,21 @@ if __name__ == "__main__":
     N1.feedforward()
     print(N1.trainpredict(), N1.testpredict())
     """
+
+    Thresholds = [0.25,0.5,0.75]
+
     loader = ccdata(NN = False)
     LogAnalyze = ModelAnalysis(Logistic(), loader)
-    N_epochs = 100
-    Ltn, Lfp, Lfn, Ltp = LogAnalyze.kfolderr(Cmat(),ks = 5, frac = 1.0,N = N_epochs,eta = 0.2,M = 128)
-    print(f"Results Logistic Regression (with {N_epochs} epochs):\
-        \nTrue negative  : {Ltn}\
-        \nFalse positive : {Lfp}\
-        \nFalse negative : {Lfn}\
-        \nTrue positie   : {Ltp}")
+    N_epochs = 1000
+    for t in Thresholds:
+        Ltn, Lfp, Lfn, Ltp = LogAnalyze.kfolderr(Cmat(t),ks = 5, frac = 1.0,N = N_epochs,eta = 0.2,M = 128)
+        print(f"Results Logistic Regression (with {N_epochs} epochs, threshold = {t}):\
+            \nTrue negative  : {Ltn}\
+            \nFalse positive : {Lfp}\
+            \nFalse negative : {Lfn}\
+            \nTrue positie   : {Ltp}")
+        Lacc = (Ltp+Ltn)/(Ltn + Lfp + Lfn + Ltp)
+        save_results_latex("LogRegResults.txt",[t,Ltn, Lfp, Lfn, Ltp,Lacc],["%.2f"]+["%.1f"]*4 + ["%.3f"])
     Lx_data, Ly_data, LAUC= LogAnalyze.ROCcurve(N_run = 20, N = 1000, eta = 0.1, M = 128)
 
     loader.type = "NN"
@@ -145,12 +151,16 @@ if __name__ == "__main__":
     NNAnalyze = ModelAnalysis(NNmodel, loader)
     batch_size = 128
     batch_number = 100
-    NNtn, NNfp, NNfn, NNtp = NNAnalyze.kfolderr(CmatNN(),ks = 5, frac = 1.0,n_epochs = N_epochs,eta = 0.2,batches = batch_number)
-    print(f"Results Neural Network (with {N_epochs} epochs):\
-        \nTrue negative  : {NNtn}\
-        \nFalse positive : {NNfp}\
-        \nFalse negative : {NNfn}\
-        \nTrue positie   : {NNtp}")
+
+    for t in Thresholds:
+        NNtn, NNfp, NNfn, NNtp = NNAnalyze.kfolderr(CmatNN(t),ks = 5, frac = 1.0,n_epochs = N_epochs,eta = 0.2,batches = batch_number)
+        print(f"Results Neural Network (with {N_epochs} epochs):\
+            \nTrue negative  : {NNtn}\
+            \nFalse positive : {NNfp}\
+            \nFalse negative : {NNfn}\
+            \nTrue positie   : {NNtp}")
+        NNacc = (NNtp+NNtn)/(NNtn + NNfp + NNfn + NNtp)
+        save_results_latex("NNResults.txt",[t,Ltn, Lfp, Lfn, Ltp,Lacc],["%.2f"]+["%.1f"]*4 + ["%.3f"])
     NNx_data, NNy_data, NNAUC = NNAnalyze.ROCcurve(N_run= 20,n_epochs = 1000, eta = 0.1, batches = batch_number)
 
     plt.figure()

@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     loader = cancerdata(NN = False)
     LogAnalyze = ModelAnalysis(Logistic(), loader)
-    tn, fp, fn, tp = LogAnalyze.kfolderr(Cmat(),ks = 5, frac = 1.0,N = 1000,eta = 0.2,M = 128)
+    tn, fp, fn, tp = LogAnalyze.kfolderr(Cmat(0.5),ks = 5, frac = 1.0,N = 1000,eta = 0.2,M = 128)
     print(f"Results Logistic Regression:\
         \nTrue negative  : {tn}\
         \nFalse positive : {fp}\
@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
 
     batch_number = 10
-    NNtn, NNfp, NNfn, NNtp = NNAnalyze.kfolderr(CmatNN(),ks = 5, frac = 1.0,n_epochs = 10,eta = 0.2,batches = batch_number)
+    NNtn, NNfp, NNfn, NNtp = NNAnalyze.kfolderr(CmatNN(0.5),ks = 5, frac = 1.0,n_epochs = 10,eta = 0.2,batches = batch_number)
     print(f"Results Neural Network:\
         \nTrue negative  : {NNtn}\
         \nFalse positive : {NNfp}\

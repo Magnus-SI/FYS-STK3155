@@ -80,15 +80,18 @@ class Cmat:
     Uses scikit learns confusion matrix
     returns array with TN, FP, FN, TP for binary
     """
+    def __init__(self,threshold):
+        self.threshold = threshold
+
     def __call__(self,x,target):
         if len(target.shape) == 2:
             y = target.flatten()
         else:
             y = target
         if len(x.shape) == 2:
-            x = np.round(x.flatten())
+            x = x.flatten()>self.threshold
         else:
-            x = np.round(x)
+            x = x>self.threshold
         return confusion_matrix(y,x).ravel()
 
 class CmatNN:
@@ -97,12 +100,15 @@ class CmatNN:
     returns array with TN, FP, FN, TP for binary
     takes two vectors, where the first is the probability for 1
     """
+    def __init__(self,threshold):
+        self.threshold = threshold
+
     def __call__(self,x,target):
         y = target[:,0]
-        x = np.round(x[0,:])
+        x = x[0,:]>self.threshold
         return confusion_matrix(y,x).ravel()
 
-    
+
 
 
 class Accu2:
