@@ -83,7 +83,7 @@ if __name__ == "__main__":
         \nFalse positive : {fp}\
         \nFalse negative : {fn}\
         \nTrue positie   : {tp}")
-    Lx_data, Ly_data, LAUC = LogAnalyze.ROCcurve(N_run= 10, N = 1000, eta = 0.2, M = 128)
+    Lx_data, Ly_data, LAUC = LogAnalyze.ROCcurve(N_run= 20, N = 1000, eta = 0.2, M = 128)
 
     loader.type = "NN"
     NNmodel = FFNN(hlayers = [30], activation = ReLU(0.01), outactivation = Softmax(),
@@ -99,14 +99,17 @@ if __name__ == "__main__":
         \nFalse negative : {NNfn}\
         \nTrue positie   : {NNtp}")
 
-    NNx_data, NNy_data, NNAUC = NNAnalyze.ROCcurve(N_run= 10, n_epochs = 100, eta = 0.2, batches = batch_number)
+    NNx_data, NNy_data, NNAUC = NNAnalyze.ROCcurve(N_run= 20, n_epochs = 1000, eta = 0.2, batches = batch_number)
 
     plt.figure()
     plt.plot(Lx_data,Ly_data,label="Logistic Regression")
     plt.plot(NNx_data,NNy_data,label="Neural Network")
+    plt.plot([0,1],[0,1],'k--', label = "Baseline")
     plt.xlabel("False positive rate")
     plt.ylabel("True positive rate")
     plt.legend()
+    plt.grid()
+    plt.savefig("Classificationfigs/ROC_cancer.pdf")
     plt.show()
 
     # NNmodel.doreset = True
@@ -117,7 +120,7 @@ if __name__ == "__main__":
     dftrain, dftest = np.split(df, [int(0.8*len(df))])
     xtrain = dftrain[Xv].values; xtest = dftest[Xv].values
     ytrain = dftrain[yv].values; ytest = dftest[yv].values
-    NNmodel.fit(xtrain, ytrain, n_epochs, 0.2, batches)
+    NNmodel.fit(xtrain, ytrain, n_epochs, batches)
     ypred = np.round(NNmodel.predict(xtest))
     y = dftest[yv].values
     Lmodel = Logistic()

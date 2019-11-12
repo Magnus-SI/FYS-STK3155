@@ -138,7 +138,7 @@ if __name__ == "__main__":
         \nFalse positive : {Lfp}\
         \nFalse negative : {Lfn}\
         \nTrue positie   : {Ltp}")
-    Lx_data, Ly_data, LAUC= LogAnalyze.ROCcurve(N_run = 3, N = 1000, eta = 0.1, M = 128)
+    Lx_data, Ly_data, LAUC= LogAnalyze.ROCcurve(N_run = 20, N = 1000, eta = 0.1, M = 128)
 
     loader.type = "NN"
     NNmodel = FFNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = Softmax(), cost = CrossEntropy(), Xfeatures = 5, yfeatures = 2)
@@ -151,7 +151,7 @@ if __name__ == "__main__":
         \nFalse positive : {NNfp}\
         \nFalse negative : {NNfn}\
         \nTrue positie   : {NNtp}")
-    NNx_data, NNy_data, NNAUC = NNAnalyze.ROCcurve(N_run= 3,n_epochs = 1000, eta = 0.1, batches = batch_number)
+    NNx_data, NNy_data, NNAUC = NNAnalyze.ROCcurve(N_run= 20,n_epochs = 1000, eta = 0.1, batches = batch_number)
 
     plt.figure()
     plt.plot(Lx_data,Ly_data,label="Logistic Regression")
@@ -160,7 +160,8 @@ if __name__ == "__main__":
     plt.xlabel("False positive rate")
     plt.ylabel("True positive rate")
     plt.legend()
-    plt.savefig("ROC.pdf")
+    plt.grid()
+    plt.savefig("Classificationfigs/ROC_credit.pdf")
     plt.show()
 
     # n_epochs = 100
