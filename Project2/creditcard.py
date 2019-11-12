@@ -135,6 +135,7 @@ if __name__ == "__main__":
     loader = ccdata(NN = False)
     LogAnalyze = ModelAnalysis(Logistic(), loader)
     N_epochs = 1000
+
     for t in Thresholds:
         Ltn, Lfp, Lfn, Ltp = LogAnalyze.kfolderr(Cmat(t),ks = 5, frac = 1.0,N = N_epochs,eta = 0.2,M = 128)
         print(f"Results Logistic Regression (with {N_epochs} epochs, threshold = {t}):\
@@ -145,7 +146,7 @@ if __name__ == "__main__":
         Lacc = (Ltp+Ltn)/(Ltn + Lfp + Lfn + Ltp)
         save_results_latex("LogRegResults.txt",[t,Ltn, Lfp, Lfn, Ltp,Lacc],["%.2f"]+["%.1f"]*4 + ["%.3f"])
     Lx_data, Ly_data, LAUC= LogAnalyze.ROCcurve(N_run = 20, N = 1000, eta = 0.1, M = 128)
-
+    
     loader.type = "NN"
     NNmodel = FFNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = Softmax(), cost = CrossEntropy(), Xfeatures = 5, yfeatures = 2)
     NNAnalyze = ModelAnalysis(NNmodel, loader)
@@ -160,7 +161,7 @@ if __name__ == "__main__":
             \nFalse negative : {NNfn}\
             \nTrue positie   : {NNtp}")
         NNacc = (NNtp+NNtn)/(NNtn + NNfp + NNfn + NNtp)
-        save_results_latex("NNResults.txt",[t,Ltn, Lfp, Lfn, Ltp,Lacc],["%.2f"]+["%.1f"]*4 + ["%.3f"])
+        save_results_latex("NNResults.txt",[t,NNtn, NNfp, NNfn, NNtp,NNacc],["%.2f"]+["%.1f"]*4 + ["%.3f"])
     NNx_data, NNy_data, NNAUC = NNAnalyze.ROCcurve(N_run= 20,n_epochs = 1000, eta = 0.1, batches = batch_number)
 
     plt.figure()
