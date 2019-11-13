@@ -117,3 +117,13 @@ class Accu2:
         #print(x, y)
         #import yyoeror
         return np.count_nonzero((np.round(x)-y) == 0, axis=1)/y.shape[1]
+
+class ELU:
+    def __init__(self,a):
+        self.a = a
+
+    def __call__(self,x):
+        return x*(x>0) + self.a*(np.exp(x)-1)*(x<0)
+
+    def derivative(self,x):
+        return (x>0) + self.a*np.exp(x)*(x<0)

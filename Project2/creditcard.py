@@ -84,6 +84,7 @@ class ccdata:
     def __call__(self):
         df = self.df
         y = df['Y'].values
+        #self.X_vars = df.keys()[1:-1]#self.X_vars[1:]
         X_vars = self.X_vars#df.keys()[1:-1]
         #npca = 4#len(X_vars)#4
         #pca = PCA(n_components = npca)
@@ -121,6 +122,58 @@ def save_results_latex(filename,results,format_types):
     file.write(string)
     file.close()
 
+def save_true_false_results(t,tn,fp,fn,tp,filename):
+    print(f"\
+        \nTrue negative  : {tn}\
+        \nFalse positive : {fp}\
+        \nFalse negative : {fn}\
+        \nTrue positie   : {tp}")
+    acc = (tp+tn)/(tn + fp + fn + tp)
+    save_results_latex(filename,[t,tn, fp, fn, tp, acc],["%.2f"]+["%.1f"]*4 + ["%.3f"])
+
+def Analyze_LogReg(loader,N_epochs):
+    loader.type = 'logreg'
+    Thresholds = [0.5]
+    LogAnalyze = ModelAnalysis(Logistic(), loader)
+
+    for t in Thresholds:
+        print(f"Logistic Regression (with {N_epochs} epochs, threshold = {t}):")
+        Ltn, Lfp, Lfn, Ltp = LogAnalyze.kfolderr(Cmat(t),ks = 5, frac = 1.0,N = N_epochs,eta = 0.2,M = 128)
+        save_true_false_results(t,Ltn, Lfp, Lfn, Ltp,"LogRegResults.txt")
+
+def plot_LogReg(loader,N_epochs):
+    loader.type = 'logreg'
+    LogAnalyze = ModelAnalysis(Logistic(), loader)
+    Lx_data, Ly_data, LAUC = LogAnalyze.ROCcurve(N_run = 10, N = N_epochs, eta = 0.1, M = 128)
+    plt.plot(Lx_data, Ly_data, label="Logistic Regression")
+
+def Analyze_NN(loader,N_epochs):
+    loader.type = 'NN'
+    Thresholds = [0.5]
+    Xf = len(loader.X_vars)
+    NNmodel = FFNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = Softmax(), cost = CrossEntropy(), Xfeatures = Xf, yfeatures = 2)
+    NNAnalyze = ModelAnalysis(NNmodel, loader)
+    trainsize = 0.8*len(NNAnalyze.df)
+    batch_size = 128
+    batch_number = int(trainsize/batch_size)
+    for t in Thresholds:
+        NNtn, NNfp, NNfn, NNtp = NNAnalyze.kfolderr(CmatNN(t),ks = 5, frac = 1.0,n_epochs = N_epochs,eta = 0.2,batches = batch_number)
+        save_true_false_results(t,NNtn, NNfp, NNfn, NNtp,"NNResults.txt")
+
+def plot_NN(loader,N_epochs,act_func):
+    loader.type = 'NN'
+    Xf = len(loader.X_vars)
+    NNmodel = FFNN(hlayers = [30,15], activation = Sigmoid(), outactivation = Softmax(), cost = CrossEntropy(), Xfeatures = Xf, yfeatures = 2)
+    NNAnalyze = ModelAnalysis(NNmodel, loader)
+    trainsize = 0.8*len(NNAnalyze.df)
+    batch_size = 128
+    batch_number = int(trainsize/batch_size)
+    for func in act_func:
+        NNmodel.activation = func
+        NNx_data, NNy_data, NNAUC = NNAnalyze.ROCcurve(N_run= 10,n_epochs = N_epochs, eta = 0.1, batches = batch_number)
+        plt.plot(NNx_data,NNy_data,label=f"Neural Network with {type(NNmodel.activation).__name__}")
+
+
 if __name__ == "__main__":
     """
     ccd = ccdata(NN = True)
@@ -130,43 +183,22 @@ if __name__ == "__main__":
     print(N1.trainpredict(), N1.testpredict())
     """
 
-    Thresholds = [0.25,0.5,0.75]
+    Thresholds = [0.5]
 
     loader = ccdata(NN = False)
-    LogAnalyze = ModelAnalysis(Logistic(), loader)
-    N_epochs = 1000
+    N_epochs = 10
 
-    for t in Thresholds:
-        Ltn, Lfp, Lfn, Ltp = LogAnalyze.kfolderr(Cmat(t),ks = 5, frac = 1.0,N = N_epochs,eta = 0.2,M = 128)
-        print(f"Results Logistic Regression (with {N_epochs} epochs, threshold = {t}):\
-            \nTrue negative  : {Ltn}\
-            \nFalse positive : {Lfp}\
-            \nFalse negative : {Lfn}\
-            \nTrue positie   : {Ltp}")
-        Lacc = (Ltp+Ltn)/(Ltn + Lfp + Lfn + Ltp)
-        save_results_latex("LogRegResults.txt",[t,Ltn, Lfp, Lfn, Ltp,Lacc],["%.2f"]+["%.1f"]*4 + ["%.3f"])
-    Lx_data, Ly_data, LAUC= LogAnalyze.ROCcurve(N_run = 20, N = 1000, eta = 0.1, M = 128)
-    
-    loader.type = "NN"
-    NNmodel = FFNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = Softmax(), cost = CrossEntropy(), Xfeatures = 5, yfeatures = 2)
-    NNAnalyze = ModelAnalysis(NNmodel, loader)
-    batch_size = 128
-    batch_number = 100
+    Analyze_LogReg(loader, N_epochs)
 
-    for t in Thresholds:
-        NNtn, NNfp, NNfn, NNtp = NNAnalyze.kfolderr(CmatNN(t),ks = 5, frac = 1.0,n_epochs = N_epochs,eta = 0.2,batches = batch_number)
-        print(f"Results Neural Network (with {N_epochs} epochs):\
-            \nTrue negative  : {NNtn}\
-            \nFalse positive : {NNfp}\
-            \nFalse negative : {NNfn}\
-            \nTrue positie   : {NNtp}")
-        NNacc = (NNtp+NNtn)/(NNtn + NNfp + NNfn + NNtp)
-        save_results_latex("NNResults.txt",[t,NNtn, NNfp, NNfn, NNtp,NNacc],["%.2f"]+["%.1f"]*4 + ["%.3f"])
-    NNx_data, NNy_data, NNAUC = NNAnalyze.ROCcurve(N_run= 20,n_epochs = 1000, eta = 0.1, batches = batch_number)
+    Analyze_NN(loader, N_epochs)
+
+    act_func = [ReLU(0.01), ELU(0.01), Sigmoid()]
 
     plt.figure()
-    plt.plot(Lx_data,Ly_data,label="Logistic Regression")
-    plt.plot(NNx_data,NNy_data,label="Neural Network")
+
+    plot_LogReg(loader,N_epochs)
+    plot_NN(loader,N_epochs,act_func)
+
     plt.plot([0,1],[0,1],'k--', label = "Baseline")
     plt.xlabel("False positive rate")
     plt.ylabel("True positive rate")
