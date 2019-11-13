@@ -1,8 +1,4 @@
 import numpy as np
-from sklearn import datasets
-import matplotlib.pyplot as plt
-import pandas as pd
-import seaborn as sns
 
 def sigmoid(t):
     return 1/(1 + np.exp(-t))
@@ -100,65 +96,19 @@ class Logistic:
 
 
 if __name__ == '__main__':
+    import pandas as pd
+    from sklearn import datasets
     cancer = datasets.load_breast_cancer()
     cancerpd = pd.DataFrame(cancer.data, columns=cancer.feature_names)
-    indices = np.array([0,7]) # Using mean radius and mean concave points to predict
-    # (Seemed reasonable from plot)
-    X_data = cancer.data[:,indices]
+    X_data = cancer.data
     y_data = cancer.target
 
-    N_train = 5000
+    N_train = 1000
     model = Logistic()
     model.fit(X_data,y_data,N_train,0.01,128)
 
-    print(f"Training accuracy = {np.sum(np.round(model(X_data)) == y_data)/len(y_data)}")
-    if np.all(np.round(model(X_data))>(1-1e-8)):
+    print(f"Training accuracy cancer data = {np.sum(np.round(model.predict(X_data)) == y_data)/len(y_data)}")
+    if np.all(np.round(model.predict(X_data))>(1-1e-8)):
         print(f"All predictions = 1, looks like something went wrong")
-    elif np.all(np.round(model(X_data))==0):
+    elif np.all(np.round(model.predict(X_data))==0):
         print(f"All predictions = 0, looks like something went wrong")
-
-
-    n_train = 1000; p = 1
-    X_train = np.random.random((n_train,p))
-    y_train = np.array(X_train>0.5).astype(float)[:,0]
-
-    n_test = 1432
-    X_test = np.round(np.random.random((n_test,p)))
-    y_test = np.array(X_test>0.5).astype(float)[:,0]
-
-    X_test_noround = np.random.random((n_train,p))
-    y_test_noround = np.array(X_test_noround>0.5).astype(float)[:,0]
-
-    test_model = Logistic()
-    test_model.fit(X_train,y_train,5000,0.01,128)
-
-    train_acc = np.sum(np.round(test_model.predict(X_train)) == y_train)/len(y_train)
-    test_acc = np.sum(np.round(test_model.predict(X_test)) == y_test)/len(y_test)
-    test_acc_noround = np.sum(np.round(test_model.predict(X_test_noround)) == y_test_noround)/len(y_test_noround)
-
-    print(f"Training accuracy test model                = {train_acc:.3f}")
-    print(f"Testing accuracy test model (with rounding) = {test_acc:.3f}")
-    print(f"Testing accuracy test model  (no rounding)  = {test_acc_noround:.3f}")
-
-    """
-    correlation_matrix = cancerpd.corr().round(1)
-    sns.heatmap(data=correlation_matrix, annot=True)
-    plt.show()
-
-    fig, axes = plt.subplots(15,2,figsize=(10,20))
-    malignant = cancer.data[cancer.target == 0]
-    benign = cancer.data[cancer.target == 1]
-    ax = axes.ravel()
-
-    for i in range(30):
-        _, bins = np.histogram(cancer.data[:,i], bins =50)
-        ax[i].hist(malignant[:,i], bins = bins, alpha = 0.5)
-        ax[i].hist(benign[:,i], bins = bins, alpha = 0.5)
-        ax[i].set_title(cancer.feature_names[i])
-        ax[i].set_yticks(())
-    ax[0].set_xlabel("Feature magnitude")
-    ax[0].set_ylabel("Frequency")
-    ax[0].legend(["Malignant", "Benign"], loc ="best")
-    fig.tight_layout()
-    plt.show()
-    """
