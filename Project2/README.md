@@ -22,7 +22,7 @@ Report saved as FYS_STK3155Project2.pdf
   Contains a class for neural networks.
 
   - **NNregressor.py**  
-  ?
+  Inherits the Project1 class in ../Project1/project1.py, with tools for analyzing the Franke Function. This is used for the regression case of our FFNN, and some other methods are added specific to this case, including an optimal hyperparameter search, and bias variance plotting for the different hyperparamters.
 
   - **test_functions.py**  
   Contains Python test functions.
