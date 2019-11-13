@@ -9,6 +9,9 @@ from numpy.polynomial.polynomial import polyvander2d
 from sklearn.neural_network import MLPRegressor
 
 def testletter():
+    """
+    test case based on the MNIST letter data base
+    """
     digits = datasets.load_digits()
     inputs = digits.images
     labels = digits.target
@@ -26,50 +29,20 @@ def testletter():
 
     return df, X_vars, y_vars
 
-def testlinreg():
-    def FrankeFunction(x,y):
-        "The Franke function"
-        term1 = 0.75*np.exp(-(0.25*(9*x-2)**2)-0.25*((9*y-2)**2))
-        term2 = 0.75*np.exp(-((9*x+1)**2)/49.0 - 0.1*(9*y+1))
-        term3 = 0.5*np.exp(-(9*x-7)**2/4.0 - 0.25*((9*y-3)**2))
-        term4 = -0.2*np.exp(-(9*x-4)**2 - (9*y-7)**2)
-        return term1 + term2 + term3 + term4
-
-    df = pd.DataFrame()
-    x1,x2 = np.random.uniform(0,1,size=(2,100))
-    y = FrankeFunction(x1,x2)
-    #X = polyvander2d(x1,x2, (10,10))
-    # X_vars = ["%i"%i for i in range(X.shape[1])]
-    # for i,label in enumerate(X_vars):
-    #     df[label] = X[:,i]
-    df['x1'] = x1
-    df['x2'] = x2
-    X_vars = ['x1', 'x2']
-    y_vars = ['y']
-    df['y'] = y
-    return df, X_vars, y_vars
-
-def testclassify():
-    df = pd.DataFrame()
-    N = 10
-    minint = -3; maxint = 5
-    x = np.random.randint(minint,maxint, size=N)
-    onehot = np.zeros((N,maxint-minint))
-    onehot[np.arange(N), x] = 1
-    df['a'] = x**3
-    df['b'] = x**2
-    df['c'] = x**5
-    X_vars = ['a', 'b', 'c']
-    y_vars = [str(i) for i in range(minint, maxint)]
-    for i,y in enumerate(y_vars):
-        df[y] = onehot[:,i]
-    return df, X_vars, y_vars
-
-
 class FFNN:
     def __init__(self, hlayers, activation, outactivation, cost, Xfeatures, yfeatures,eta = 0.1):
         """
+        Defines the parameters of the feed forward neural Network
+
+        *Input*
         hlayers: list of hidden layer, e.g. [50, 20]
+        activation: the activation function used on the nodes in the hidden layers
+        outactivation: the activation function used in the output layer
+        cost: the cost function, defined as a class with a derivative subfunction
+        Xfeatures: the amount of predictors used
+        yfeaturtes: the dimension of the output aimed to model, for regression this would be 1,
+                    for binary classification, this would be 2.
+        eta: the learning rate
         """
         self.hlayers = np.array(hlayers).astype(int)
         self.NNinit(Xfeatures, yfeatures)
@@ -79,10 +52,14 @@ class FFNN:
         self.ah = [0] * (len(hlayers)+1) # list of a-vectors
         self.zh = [0] * (len(hlayers)+1) # list of z-vectors
         self.delta = [0] * (len(hlayers)+1) # list of delta vectors
-        self.doreset = True
+        self.doreset = True                 #True if reset before each new fit
         self.eta = eta
 
     def NNinit(self, Xfeatures, yfeatures):
+        """
+        Initializes the FFNN, with the predictor count Xfeatures, and ouput
+        dimension yfeatures as arguments.
+        """
         self.Xf = int(Xfeatures); self.yf = int(yfeatures)
         layers = [self.Xf] + list(self.hlayers) + [self.yf]
 
@@ -100,6 +77,11 @@ class FFNN:
 
 
     def feedforward(self, X):
+        """
+        feeds forward input X to output set as self.out
+        X: the data to use as input. has shape [n,Xfeatures] with n data points
+        self.out has shape (yfeatures, n)
+        """
         clayer = X.T
 
         self.ah[0] = clayer
@@ -115,6 +97,11 @@ class FFNN:
         self.out = self.outactivation(z_out)
 
     def backpropagate(self, y):
+        """
+        Backpropagetes through the network to update the weights and biases
+        y: the true output compared to self.out gotten from self.feedforward,
+            has shape [n,yfeatures] with n data points.
+        """
         eta, weights, biass, delta = self.eta, self.weights, self.biass, self.delta
         self.outactivation.derivative(self.z_out)
         delta[-1] = self.outactivation.derivative(self.z_out)*self.cost.derivative(self.out,y.T)
@@ -127,6 +114,16 @@ class FFNN:
             self.biass[-1-i] -= eta * np.sum(delta[-1-i],axis = 1)/y.shape[0]
 
     def fit(self, X, y, n_epochs, batches = 1, eta = None):
+        """
+        performs a fit by repeating feedforward and backpropagate for a given
+        number of epochs, updating the biases and weights for each epoch.
+
+        X: input data to use for feedforward, usually training data
+        y: output data to compare result to, usually training data
+        n_epochs: number of epochs to fit
+        batches: number of batches to split, batches>1 -> SGD instead of GD
+        eta: the learning rate eta may be reset, but usually done through self.eta
+        """
         if self.doreset:
             self.reset()      #reset any previous fits
         if eta is not None:
@@ -141,53 +138,24 @@ class FFNN:
                 self.backpropagate(y[inds])
 
     def predict(self, X):
+        """
+        Predicts on a given X-data based on the current weights and biases.
+        X: predict on this data, usually test data.
+        """
         self.feedforward(X)
         return self.out
 
-    def predclass(self, X, y):
-        self.feedforward(X)
-        prednums = np.argmax(self.out, axis = 0)
-        nums = np.argmax(y, axis = 1)
-        return np.sum((prednums-nums)==0)/ len(nums)
-
-    def predreg(self, X, y):
-        self.feedforward(X)
-        return 1/self.out.shape[1]*np.sum((self.out-y.T)**2)
-
     def reset(self):
+        """
+        Resets the weights and biases of the NN
+        """
         self.NNinit(self.Xf, self.yf)
-
-def gradientmethod():
-    pass
-
 
 
 
 if __name__ == "__main__":
-    # N1 = FFNN(hlayers = [100,50], activation = ReLU(0.01), outactivation = ReLU(1.00), cost = MSE(), loader = testlinreg)
-    # N1.fit(200, batches = 10)
-    # N1.feedforward(test=True)
-    # #print(N1.out)
-    # print(N1.testpredreg(), N1.fitpredreg())
-    #
-    # reg = MLPRegressor(hidden_layer_sizes = (100,50),
-    #                     solver = 'lbfgs',
-    #                     max_iter = 1000,
-    #                     tol = 1e-7,
-    #                     verbose = False)
-    # reg.fit(N1.dftrain[N1.X_vars].values, N1.dftrain[N1.y_vars].values[:,0])
-    # pred = reg.predict(N1.dftest[N1.X_vars].values)
-    # print(1/len(pred) * np.sum((pred - N1.dftest[N1.y_vars].values[:,0])**2))
-    # tpred = reg.predict(N1.dftrain[N1.X_vars].values)
-    # print(1/len(tpred) * np.sum((tpred - N1.dftrain[N1.y_vars].values[:,0])**2))
-
-
-    "Regression tests below:"
-    # predscore = N1.testpredict()
-    # print("Fraction of correct guesses =", predscore)
-    # N_test = len(N1.dftest[N1.y_vars].values)
-    # print(f"{int(round(predscore*N_test)):d} correct out of {N_test} testing datapoints")
-    # print(f"Training accuracy = {N1.fitpredict()}")
+    pass
+    "Regression tests below with scikit learn:"
     """
     model = tf.keras.models.Sequential(
         [
