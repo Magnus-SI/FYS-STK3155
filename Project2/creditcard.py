@@ -144,6 +144,7 @@ def Analyze_LogReg(loader,N_epochs):
 def plot_LogReg(loader,N_epochs):
     loader.type = 'logreg'
     LogAnalyze = ModelAnalysis(Logistic(), loader)
+    LogAnalyze.model.npred = min(LogAnalyze.df[LogAnalyze.Xstr].shape)
     Lx_data, Ly_data, LAUC = LogAnalyze.ROCcurve(N_run = 10, N = N_epochs, eta = 0.1, M = 128)
     plt.plot(Lx_data, Ly_data, label="Logistic Regression")
 
@@ -157,6 +158,7 @@ def Analyze_NN(loader,N_epochs):
     batch_size = 128
     batch_number = int(trainsize/batch_size)
     for t in Thresholds:
+        print(f"Neural network (with {N_epochs} epochs, threshold = {t}):")
         NNtn, NNfp, NNfn, NNtp = NNAnalyze.kfolderr(CmatNN(t),ks = 5, frac = 1.0,n_epochs = N_epochs,eta = 0.2,batches = batch_number)
         save_true_false_results(t,NNtn, NNfp, NNfn, NNtp,"NNResults.txt")
 
