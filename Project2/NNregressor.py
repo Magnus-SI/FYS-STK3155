@@ -157,7 +157,7 @@ class FrankeNN(Project1):       #inherits some functinos from the Project1 class
         param_arr: array containing parameter values
         param_name: name of parameter as string, for use in self.parachanger
         """
-        split = int(0.2*self.N)             #80-20 train-test split
+        split = int(0.8*self.N)             #80-20 train-test split
         MSEs = np.zeros(len(param_arr))
         biass = np.zeros(len(param_arr))
         variances = np.zeros(len(param_arr))
@@ -182,16 +182,19 @@ class FrankeNN(Project1):       #inherits some functinos from the Project1 class
 
         plt.figure()
         if param_name== "hlayer":       #hlayer is list, so must be treated separately
-            param_arr = np.arange(1, len(param_arr)+1)
+            param_arr = np.arange(len(param_arr[0]), len(param_arr)+len(param_arr[0]))
+        plt.title(r"%i data points, $log_{10}(\hat{\sigma}) = -1$"%self.N) #noise title is hardcoded, could be changed
         plt.plot(param_arr, MSEs, label="MSE")
         plt.plot(param_arr, biass, label="bias")
         plt.plot(param_arr, variances, label="variance")
-        plt.plot(param_arr, biass+variances,'--', label="bias+var")
+
+        #plt.plot(param_arr, biass+variances,'--', label="bias+var")
         plt.legend()
         if self.cost=="MSE":
             plt.yscale("log")
         plt.xlabel(param_name)
         plt.ylabel(self.cost)
+        plt.savefig("Frankefigs/%sbiasvar.pdf"%param_name)
         plt.show()
 
 
@@ -360,6 +363,36 @@ def optparainstance():
     end = time()
     return dat, (end-start)
 
+def optparaMSEs():
+    """
+    Using the optimal parameters found from the optimal parameter search (see table in report),
+    this function uses the kfold error with k=2,3,4,5 to find the corresponding values of the MSE.
+    """
+    FN1 = FrankeNN()
+    FN1.compnoisy = False
+    FN1.gendat(400, noisefraq=1e-2, Function = FrankeFunction, deg =(4,4), randpoints = True)
+    FN1.hlayers = [60,30,15]; FN1.activation = ReLU(0.005); FN1.outactivation = ReLU(1.00)
+    FN1.epochs = 500; FN1.nbatches = 15; FN1.eta = 0.2
+    FN1.cost = "MSE"
+    FN1.initNN()
+    FN1.FFNN.doreset = True
+
+    noises = np.logspace(-3,-0.5, 11)
+    orders = np.array([6,7,7,7,6,4,4,5,3,2,1])
+    etas = np.array([0.4, 0.4, 0.4, 0.4, 0.3, 0.3, 0.3, 0.2, 0.2, 0.3, 0.1])
+    arelus = np.array([0.01, 0.02, 0.03, 0.03, 0.015, 0.03, 0.005, 0.03, 0.005, 0.02, 0.015])
+    batches = np.array([20, 20, 20, 20, 20, 15, 15, 15, 20, 5, 5])
+    MSES = np.zeros(11)
+    for i in range(11):
+        print(i)
+        FN1.changenoise(noises[i])
+        FN1.parachanger('deg', orders[i])
+        FN1.parachanger('eta', etas[i])
+        FN1.parachanger('relu', arelus[i])
+        FN1.parachanger('nbatch', batches[i])
+        MSES[i] = FN1.kfolderr(ks = np.arange(2,6), method = FN1.FFNN.fit)
+    return MSES
+
 def convergencefind(noises, polydeg):
     """
     Uses FrankeNN.multiepoch for different values of noise, to compare the convegence
@@ -381,66 +414,40 @@ def convergencefind(noises, polydeg):
     plt.xscale("log")
     plt.legend()
 
-def epochbiasvar():
+def biasvarplotter(N, noise, param_arr, param_name):
     """
-    Create bias variance plot as a function of epochs of training. Plot used in report
+    Creates bias variance plot for selected parameter. Plots used in report
+
+    N: data points of the Franke Function
+    noise: sigma noise as fraction of max amplitude
+    param_arr: array of parameter values to test for
+    param_name: string containing paramter name for use in FrankeNN.parachanger(name, value)
     """
     FN1 = FrankeNN()
-    FN1.compnoisy = False
-    FN1.gendat(100, noisefraq=1e-1, Function = FrankeFunction, deg =(4,4), randpoints = True)
-    FN1.hlayers = [60,30,15]; FN1.activation = ReLU(0.005); FN1.outactivation = ReLU(1.00)
-    FN1.epochs = 500; FN1.nbatches = 15; FN1.eta = 0.2
+    FN1.compnoisy = False       #compare to actual data when evaluating error
+    FN1.gendat(N, noisefraq = noise, Function = FrankeFunction, deg = (4,4), randpoints = True)
+    FN1.hlayers = [60,30,15]    #found from optimal parameter search
+    FN1.activation = ReLU(0.005)
+    FN1.outactivation = ReLU(1.00)
+    FN1.epochs = 500
+    FN1.nbatches = 15
+    FN1.eta = 0.2
     FN1.initNN()
-    paramname = "epochs"; param_arr = np.logspace(1,3,11).astype(int)#np.array([10,30,100,300,1000])
-    #paramname = "hlayer"; param_arr = [[64], [64, 32], [64,32,16], [64,32,16,8], [64,32,16,8,4]]
-    K = 20
+    K = 20      #resamples
+    FN1.biasvar(K, param_arr, param_name)
 
-    FN1.biasvar(K, param_arr, paramname)
-
-def etabiasvar():
-    """
-    Creates bias variance plot as a function of the learning rate eta. Plot shown in report
-    """
-    FN1 = FrankeNN()
-    FN1.compnoisy = False
-    FN1.gendat(100, noisefraq=1e-1, Function = FrankeFunction, deg =(4,4), randpoints = True)
-    FN1.hlayers = [60,30,15]; FN1.activation = ReLU(0.005); FN1.outactivation = ReLU(1.00)
-    FN1.epochs = 500; FN1.nbatches = 15; FN1.eta = 0.2
-    FN1.initNN()
-    paramname = "eta"; param_arr = np.logspace(-2,0.5, 10)
-    K = 20
-
-    FN1.biasvar(K, param_arr, paramname)
-
-def hlayerbiasvar():
-    """
-    Creates bias variance plot as a function of hidden layer shapes. Plot shown in report
-    """
-    FN1 = FrankeNN()
-    FN1.compnoisy = False
-    FN1.gendat(400, noisefraq=1e-2, Function = FrankeFunction, deg =(4,4), randpoints = True)
-    FN1.hlayers = [60,30,15]; FN1.activation = ReLU(0.005); FN1.outactivation = ReLU(1.00)
-    FN1.epochs = 500; FN1.nbatches = 15; FN1.eta = 0.2
-    FN1.initNN()
-    #paramname = "epochs"; param_arr = np.array([10,100,1000])
-    paramname = "hlayer"; param_arr = [[64], [64, 32], [64,32,16], [64,32,16,8], [64,32,16,8,4]]
-    K = 15
-    FN1.biasvar(K, param_arr, paramname)
-
-def batchbiasvar():
-    """
-    Creates bias variance plot as a function of batch coutn, plot shown in report
-    """
-    FN1 = FrankeNN()
-    FN1.compnoisy = False
-    FN1.gendat(100, noisefraq=1e-1, Function = FrankeFunction, deg =(4,4), randpoints = True)
-    FN1.hlayers = [60,30,15]; FN1.activation = ReLU(0.005); FN1.outactivation = ReLU(1.00)
-    FN1.epochs = 500; FN1.nbatches = 15; FN1.eta = 0.2
-    FN1.initNN()
-    #paramname = "epochs"; param_arr = np.array([10,100,1000])
-    paramname = "nbatch"; param_arr = np.array([1, 5, 10, 20, 40, 100])
-    K = 15
-    FN1.biasvar(K, param_arr, paramname)
+def biasvarplots():
+    "creates bias var plots in the report"
+    hlayers = [[], [64], [64,32], [64,32,16], [64,32,16,8], [64,32,16,8,4],  [64,32,16,8,4,2]]
+    epochs = np.logspace(1,3,11).astype(int)
+    etas = np.logspace(-2,0.5,10)
+    batches = np.array([1, 5, 10, 20, 40, 100])
+    labels = ['hlayer', 'epochs', 'eta', 'nbatch']
+    arrs = [hlayers, epochs, etas, batches]
+    N = 100; noise = 1e-1
+    for label,param_arr in zip(labels, arrs):
+        print(label)
+        biasvarplotter(N, noise, param_arr, label)
 
 def degvnoisevhlayererr():
     """
