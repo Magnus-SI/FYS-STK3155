@@ -47,7 +47,7 @@ class CrossEntropy:
 
 class Accuracy:
     """
-    Should not be used as an actual cost function,since it has no good derivative
+    Should not be used as an actual cost function, since it has no good derivative
     """
     def __call__(self,x,target):
         if len(target.shape) == 2:
@@ -114,8 +114,6 @@ class CmatNN:
 class Accu2:
     def __call__(self, x, target):
         y = target.T
-        #print(x, y)
-        #import yyoeror
         return np.count_nonzero((np.round(x)-y) == 0, axis=1)/y.shape[1]
 
 class ELU:

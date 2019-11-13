@@ -1,22 +1,14 @@
 import numpy as np
-import importlib
 from sklearn.decomposition import PCA
 from sklearn.metrics import confusion_matrix
-from sklearn import datasets
+from sklearn import datasets, preprocessing
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import LogisticRegression as L
-importlib.reload(L)
 from LogisticRegression import Logistic
 from NeuralNet import FFNN
-import Functions as F
-importlib.reload(F)
 from Functions import *
-import Analyze as a
-importlib.reload(a)
 from Analyze import ModelAnalysis
-from sklearn import preprocessing
 
 class cancerdata:
     def __init__(self, adjust = True, NN = True):

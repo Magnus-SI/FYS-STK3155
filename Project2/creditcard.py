@@ -1,19 +1,12 @@
 import numpy as np
-import importlib
 from sklearn.decomposition import PCA
 from sklearn.metrics import confusion_matrix
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import LogisticRegression as L
-importlib.reload(L)
 from LogisticRegression import Logistic
 from NeuralNet import FFNN
-import Functions as F
-importlib.reload(F)
 from Functions import *
-import Analyze as a
-importlib.reload(a)
 from Analyze import ModelAnalysis
 from sklearn import preprocessing
 
@@ -133,7 +126,7 @@ def save_true_false_results(t,tn,fp,fn,tp,filename):
 
 def Analyze_LogReg(loader,N_epochs):
     loader.type = 'logreg'
-    Thresholds = [0.5]
+    Thresholds = np.arange(0.1,1,0.1)
     LogAnalyze = ModelAnalysis(Logistic(), loader)
 
     for t in Thresholds:
@@ -150,7 +143,7 @@ def plot_LogReg(loader,N_epochs):
 
 def Analyze_NN(loader,N_epochs):
     loader.type = 'NN'
-    Thresholds = [0.5]
+    Thresholds = np.arange(0.1,1,0.1)
     Xf = len(loader.X_vars)
     NNmodel = FFNN(hlayers = [30,15], activation = ReLU(0.01), outactivation = Softmax(), cost = CrossEntropy(), Xfeatures = Xf, yfeatures = 2)
     NNAnalyze = ModelAnalysis(NNmodel, loader)
@@ -185,10 +178,8 @@ if __name__ == "__main__":
     print(N1.trainpredict(), N1.testpredict())
     """
 
-    Thresholds = [0.5]
-
     loader = ccdata(NN = False)
-    N_epochs = 10
+    N_epochs = 1000
 
     Analyze_LogReg(loader, N_epochs)
 
