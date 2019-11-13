@@ -119,16 +119,23 @@ class FrankeNN(Project1):       #inherits some functinos from the Project1 class
         plt.show()
 
     def multiepoch(self, polydeg, noise, epoch_arr, newplot = True):
+        """
+        plots the NN fit as a function of epochs
+        polydeg: polynomial degree to make up the predictors
+        noise: relative sigma noise
+        epoch_arr: array of different epochs to compare
+        newplot: if True, create a new figure
+        """
         deg = int(polydeg)
-        self.changenoise(noisefraq=noise)
-        self.changepolydeg(polydeg = (deg, deg))
+        self.changenoise(noisefraq=noise)           #change noise
+        self.changepolydeg(polydeg = (deg, deg))    #change polnomial degree
         errs = np.zeros(len(epoch_arr))
-        self.FFNN.doreset = True
-        self.FFNN.Xf = self.X.shape[1]
-        dftrain, dftest = np.split(self.df, [int(0.8*self.N)])
+        self.FFNN.doreset = True                    #reset current fit before each new fit
+        self.FFNN.Xf = self.X.shape[1]              #features of X
+        #dftrain, dftest = np.split(self.df, [int(0.8*self.N)])  #train test split
         for i,epoch in enumerate(epoch_arr):
-            self.epochs = int(epoch)
-            errs[i] = self.kfolderr(method = self.FFNN.fit)
+            self.epochs = int(epoch)                #update with new epoch coutn
+            errs[i] = self.kfolderr(method = self.FFNN.fit) #cost using k=2,3,4,5 of kfold error
             #errs[i] = self.traintesterr(testerr = False)
         if newplot:
             plt.figure()
@@ -142,31 +149,39 @@ class FrankeNN(Project1):       #inherits some functinos from the Project1 class
         plt.show()
 
     def biasvar(self, K, param_arr, param_name):
+        """
+        Splits data into training and test data, and uses bootstrap to resample the
+        training data before fitting and evaluating error on test data.
+
+        K: amount of resamples
+        param_arr: array containing parameter values
+        param_name: name of parameter as string, for use in self.parachanger
+        """
         split = int(0.2*self.N)             #80-20 train-test split
         MSEs = np.zeros(len(param_arr))
         biass = np.zeros(len(param_arr))
         variances = np.zeros(len(param_arr))
         dftrain, dftest = np.split(self.df, [split])    #performs the split
-        testinds = dftest.index
-        y = dftest['y'].values
+        testinds = dftest.index                         #indices of test data
+        y = dftest['y'].values                          #y
         msebest = 1e10                      #temporary worst value, for saving the best value
-        self.FFNN.doreset = True
-        if not self.compnoisy:
+        self.FFNN.doreset = True                        #reset weights and biases of NN before each fit
+        if not self.compnoisy:                          #compare to exact data instead of noisy.
             y = dftest['y_exact'].values
         for j,paramval in enumerate(param_arr):
-            self.parachanger(param_name, paramval)
+            self.parachanger(param_name, paramval)      #change parameter
             ypreds = np.zeros((len(dftest), K))
             for i in range(K):
-                #df = dftrain.sample(frac=1.0, replace=True)
-                df = dftest
-                self.fit(self.FFNN.fit, df)
-                ypreds[:,i] = self.FFNN.predict(self.X[testinds])[0]
-            MSEs[j] = np.mean(np.mean((y-ypreds.transpose())**2, axis=0))
-            biass[j] = np.mean((y-np.mean(ypreds,axis=1))**2)
-            variances[j] = np.mean(np.var(ypreds, axis=1))
+                df = dftrain.sample(frac=1.0, replace=True)     #resample training data
+                #df = dftest    #use instead to train on test data, to evaluate training error
+                self.fit(self.FFNN.fit, df)                     #fit on training data
+                ypreds[:,i] = self.FFNN.predict(self.X[testinds])[0]    #predict on test data
+            MSEs[j] = np.mean(np.mean((y-ypreds.transpose())**2, axis=0))   #MSE
+            biass[j] = np.mean((y-np.mean(ypreds,axis=1))**2)               #bias
+            variances[j] = np.mean(np.var(ypreds, axis=1))                  #variance
 
         plt.figure()
-        if param_name== "hlayer":
+        if param_name== "hlayer":       #hlayer is list, so must be treated separately
             param_arr = np.arange(1, len(param_arr)+1)
         plt.plot(param_arr, MSEs, label="MSE")
         plt.plot(param_arr, biass, label="bias")
@@ -181,10 +196,17 @@ class FrankeNN(Project1):       #inherits some functinos from the Project1 class
 
 
     def degvnoiseerr(self, polydegs, noises):
+        """
+        Create 2d seaborn heatmap of the relation between polynomial degree and noise.
+        Uses a normal train-test split to calculate the error.
+        polydegs: polynomial degrees to use
+        noises: noises to use
+        """
+        self.cost = "R2"
         TestErrors = np.zeros((len(polydegs), len(noises)))
-        TrainErrors = np.zeros((len(polydegs), len(noises)))
-        showvals = True
-        self.FFNN.doreset = True
+        #TrainErrors = np.zeros((len(polydegs), len(noises)))
+        showvals = True                     #show values in heatmap
+        self.FFNN.doreset = True            #reset before each fit
         for i,deg in enumerate(polydegs):
             self.parachanger("deg", deg)
 
@@ -193,59 +215,78 @@ class FrankeNN(Project1):       #inherits some functinos from the Project1 class
                 print(i,j)      #shows progress
 
                 #TestErrors[i,j] = self.kfolderr(ks = np.arange(2,6), method = FNN.FFNN.fit)
-                TestErrors[i,j] = self.traintesterr()
+                TestErrors[i,j] = self.traintesterr()       #train vs test error
                 #TrainErrors[i,j] = self.traintesterr(testerr = False)#self.fiterr(method = FNN.FFNN.fit)
-        #f, axs = plt.subplots(2,1, figsize=(12,12))
-        #ax1, ax2 = axs
         f, ax1 = plt.subplots(1,1, figsize = (12,12))
         h1=sns.heatmap(data=TestErrors,annot=showvals,cmap='viridis',ax=ax1,xticklabels=np.around(np.log10(noises), 1), yticklabels=polydegs, vmin = 0.95, vmax = 1.0, fmt = '.3g')
         print(np.max(TestErrors), np.argmax(TestErrors))
         ax1.set_xlabel(r'$log_{10}(\sigma)$')
         ax1.set_ylabel('Polynomial degree')
         ax1.set_title(r'%s epochs %s Test %s, #datapoints = %i'%(self.epochs,"FFNN",self.cost, int(self.N*self.frac)))
-        # h2=sns.heatmap(data=TrainErrors,annot=showvals,cmap='viridis',ax=ax2,xticklabels=np.around(np.log10(noises), 1), yticklabels=polydegs, vmin = 0.95, vmax = 1.0, fmt = '.3g')
-        # ax2.set_xlabel(r'$log_{10}(\sigma)$')
-        # ax2.set_ylabel('Polynomial degree')
-        # ax2.set_title(r'%s epochs %s Train %s'%(self.epochs,"FFNN", self.cost))
         plt.show()
 
     def optparafinder(self, Nloops, noise, epochs, eta_arr, polydeg_arr, nbatch_arr, hlayer_arr, relu_arr, inits):
-        arrs = [eta_arr, polydeg_arr, nbatch_arr, hlayer_arr, relu_arr]
+        """
+        Makes an opyimal parameter search for values of eta, polydeg, number of batches,
+        hidden layers and the parameter a in ReLU. Does this by finding optimal values
+        of one at a time, fixing the others, looping over an amount of times
+
+        Nloops: times to loop over the search. Since the parameters are reset to their
+        found optimal values in order, one would expect at least 2 loops necessary to
+        find the optimal solution
+        noise: noise to add to the data
+        epochs: integer value of epochs to train for
+        eta_arr: array containing values of eta.
+        polydeg_arr: array containing integer values corresponding to order of polynomial coefficients
+        nbatch_arr: array containing integer values corresponding to batches to use in SGD
+        hlayer_arr: array or list, containing lists describing the hidden layers, e.g [[], [30], [60,30]]
+        relu_arr: array containing values of the parameter a in relu
+        inits: initial values for the above parameters.
+        """
+
+        arrs = [eta_arr, polydeg_arr, nbatch_arr, hlayer_arr, relu_arr] #array containing values in search space
         labels = ['eta', 'deg', 'nbatch', 'hlayer', 'relu']
-        for s,v in zip(labels,inits):
+        for s,v in zip(labels,inits):       #chane parameters to initial values
             self.parachanger(s, v)
         optvals = inits
-        self.FFNN.doreset = True
-        self.changenoise(noise)
-        self.epochs = epochs
+        self.FFNN.doreset = True        #reset after each fit
+        self.changenoise(noise)         #change noise
+        self.epochs = epochs            #set epochs
+        self.cost = "R2"                #currently only used with R2 score as cost
         optinds = np.zeros((Nloops, len(labels))).astype(int)
         opterrs = np.zeros(Nloops)
         bestr2 = 0
-        for i in range(Nloops):
-            for j,arr in enumerate(arrs):
+        for i in range(Nloops):                     #goes through Nloops loops
+            for j,arr in enumerate(arrs):           #goes through the different parameters
                 err_arr = np.zeros(len(arr))
-                for k,val in enumerate(arr):
+                for k,val in enumerate(arr):        #goes through the values in a parameter
                     print(i,j,k)
-                    self.parachanger(labels[j], val)
+                    self.parachanger(labels[j], val)                #update parameter
                     #err_arr[k] = self.traintesterr(testerr = True)
+                    #evaluate kfold error with k=2,3,4,5with updated parameter:
                     err_arr[k] = self.kfolderr(ks = np.array([2,3,4,5]), method = self.FFNN.fit)
 
-                optind = np.argmax(err_arr)
-                optinds[i,j] = optind
-                self.parachanger(labels[j], arr[optind])
-            opterrs[i] = np.max(err_arr)
-        optcomb = np.argmax(opterrs)
-        optfin = optinds[optcomb]
+                optind = np.argmax(err_arr)     #index of optimal value of the parameter
+                optinds[i,j] = optind           #store index
+                self.parachanger(labels[j], arr[optind])    #change to optimal value
+            opterrs[i] = np.max(err_arr)        #error for the foudn optimal values this loop
+        optcomb = np.argmax(opterrs)            #highest R2 score from all the loops
+        optfin = optinds[optcomb]               #parameter indices that caused best R2 score
         #print("Optimal values:")
         for i,val in enumerate(optfin):
-            self.parachanger(labels[i],arrs[i][val])
-            with open("opt%.2f.txt"%(np.log10(noise)), "a") as w:
+            self.parachanger(labels[i],arrs[i][val])    #update parameter to best found value
+            with open("opt%.2f.txt"%(np.log10(noise)), "a") as w:   #store best fit in text file, named with relevant noise
                 w.write("\n")
                 w.write(labels[i] + ": " + str(arrs[i][val]))
         return optinds, opterrs
 
 
     def parachanger(self, label, val):
+        """
+        Changes a parameter of the FFNN
+        label: name of parameter as string
+        val: value to change parameter to
+        """
         if label == "eta":
             self.eta = val
             self.FFNN.eta = val
@@ -264,30 +305,50 @@ class FrankeNN(Project1):       #inherits some functinos from the Project1 class
             self.epochs = val
 
 def optparaexplorer(Nloops, noise, epochs):
+    """
+    Explores a search space of optimal parameters using FrankeNN.optparafinder
+    Nloops: number of loops
+    noise: nosie to use
+    epochs: epochs of training
+    """
+    #First initialize franke function and NN:
     FNN = FrankeNN()
-    FNN.compnoisy = False
+    FNN.compnoisy = False   #compare to actual data
     FNN.gendat(400, noisefraq = noise, Function = FrankeFunction, deg = (5,5), randpoints = True)
     FNN.hlayers = [30,15]; FNN.activation = ReLU(0.01); FNN.outactivation = ReLU(1.00); FNN.epochs = 10; FNN.nbatches = 5; FNN.eta = 0.1
     FNN.initNN()
     FNN.cost = "R2"
 
+    #Define parameter search space
     eta_arr = np.array([0.05, 0.1, 0.15, 0.2, 0.3, 0.4])#np.array([0.1, 0.15, 0.2])#np.array([0.05, 0.1, 0.15, 0.2])
     polydeg_arr = np.arange(1,8)#np.arange(1,15)
     nbatch_arr = np.array([1, 5, 10, 15, 20])#np.array([10, 15])
     hlayer_arr = [[], [30], [60], [30,15], [60,30,15], [32,16,8], [16,8,4]]
     relu_arr = np.array([0.005, 0.01, 0.015, 0.02, 0.03])
-    inits = [0.15, 5, 10, [30,15], 0.01]
+    inits = [0.15, 5, 10, [30,15], 0.01]        #initial values of the parameters in the same order
     optinds, opterrs = FNN.optparafinder(Nloops, noise, epochs, eta_arr, polydeg_arr, nbatch_arr, hlayer_arr, relu_arr, inits)
-    finopt = optinds[-1]
+    #finopt = optinds[-1]
     return FNN,optinds, opterrs
 
 def multinoiseoptpara(noises, Nloops, epochs):
+    """
+    explore search space of parameter, using multiple values for the noise, calling
+    the optparaexplorer function.
+
+    noises: noises to use
+    Nloops: number of loops in optimal parameter search
+    epochs: epochs of training.
+    """
     dats = []
     for noise in noises:
         dats.append(optparaexplorer(Nloops, noise, epochs))
-    return dats
+    return dats     #return all data (optimal values also saved to text files, with names of different noise)
 
 def optparainstance():
+    """
+    The call of multinoiseoptpara we used to preduce the results shown in the table
+    in the article.
+    """
     Nloops = 3
     noise = 1e-2
     epochs = 500
@@ -300,6 +361,10 @@ def optparainstance():
     return dat, (end-start)
 
 def convergencefind(noises, polydeg):
+    """
+    Uses FrankeNN.multiepoch for different values of noise, to compare the convegence
+    time as the noise varies. Used to create plot shown in the report
+    """
     FNN = FrankeNN()
     FNN.compnoisy = False
     FNN.gendat(400, noisefraq = 1e-2, Function = FrankeFunction, deg = (4,4), randpoints = True)
@@ -317,6 +382,9 @@ def convergencefind(noises, polydeg):
     plt.legend()
 
 def epochbiasvar():
+    """
+    Create bias variance plot as a function of epochs of training. Plot used in report
+    """
     FN1 = FrankeNN()
     FN1.compnoisy = False
     FN1.gendat(100, noisefraq=1e-1, Function = FrankeFunction, deg =(4,4), randpoints = True)
@@ -330,6 +398,9 @@ def epochbiasvar():
     FN1.biasvar(K, param_arr, paramname)
 
 def etabiasvar():
+    """
+    Creates bias variance plot as a function of the learning rate eta. Plot shown in report
+    """
     FN1 = FrankeNN()
     FN1.compnoisy = False
     FN1.gendat(100, noisefraq=1e-1, Function = FrankeFunction, deg =(4,4), randpoints = True)
@@ -342,6 +413,9 @@ def etabiasvar():
     FN1.biasvar(K, param_arr, paramname)
 
 def hlayerbiasvar():
+    """
+    Creates bias variance plot as a function of hidden layer shapes. Plot shown in report
+    """
     FN1 = FrankeNN()
     FN1.compnoisy = False
     FN1.gendat(400, noisefraq=1e-2, Function = FrankeFunction, deg =(4,4), randpoints = True)
@@ -354,6 +428,9 @@ def hlayerbiasvar():
     FN1.biasvar(K, param_arr, paramname)
 
 def batchbiasvar():
+    """
+    Creates bias variance plot as a function of batch coutn, plot shown in report
+    """
     FN1 = FrankeNN()
     FN1.compnoisy = False
     FN1.gendat(100, noisefraq=1e-1, Function = FrankeFunction, deg =(4,4), randpoints = True)
@@ -366,6 +443,9 @@ def batchbiasvar():
     FN1.biasvar(K, param_arr, paramname)
 
 def degvnoisevhlayererr():
+    """
+    Creates 2d seaborn heatmap of noise vs polynomial order, for different hidden layer shapes
+    """
     FN1 = FrankeNN()
     FN1.compnoisy = False
     FN1.gendat(400, noisefraq=1e-1, Function = FrankeFunction, deg =(4,4), randpoints = True)
@@ -379,7 +459,6 @@ def degvnoisevhlayererr():
         FN1.degvnoiseerr(degs, np.logspace(-3, -0.5, 11))
 
 if __name__ == "__main__":
-    pass
     #dat, t_elapsed = optparainstance()  #WARNING: will take 5 hours-1 day depending on hardware.
 
     FN1 = FrankeNN()
