@@ -12,7 +12,7 @@ Report saved as FYS_STK3155Project2.pdf
   - **creditcard.py**  
   Preformes logistic regression, and trains three neural networks on the credit card data (with the sigmoid, ReLU and ELU activation functions), the main dataset used for classification in our report. Finds number of true/false negatives and positives, and plots ROC curves.
 
-  - **Functinos.py**  
+  - **Functions.py**  
   Contains various functions used as cost functions, activation functions by the neural networks. Also contains function to evaluate the preformance of classifiers.
 
   - **LogisticRegression.py**  
@@ -26,3 +26,5 @@ Report saved as FYS_STK3155Project2.pdf
 
   - **test_functions.py**  
   Contains Python test functions.
+
+We also have the folders 'Classificationfigs' and 'Frankefigs' with the plots created by cancer.py and creditcard.py
