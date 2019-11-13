@@ -1,7 +1,4 @@
 # Project 2
-Note that the codes and report are not yet finalized. Final version will be added before the extended deadline on wednesday 13.11 along with an update of this readme, describing the functionalities of our code.
-Report saved as FYS_STK3155Project2.pdf
-
 ## Program descriptions
  - **Analyze.py**  
  Contains a class 'ModelAnalysis' to preform k-fold cross validation, return ROC curves and other functions to analyze a model.
