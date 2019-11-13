@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-#import scikitplot as skplt
 from sklearn import metrics
 
 class ModelAnalysis:
@@ -72,7 +71,7 @@ class ModelAnalysis:
 
     def ROCcurve(self,N_run,*args,**kwargs):
         """
-        Returns FP, TP, thresholds and the area under the ROC curve
+        Returns FP rate, TP rate, and the area under the ROC curve
         """
 
         dfsplit = self.kfoldsplit(5,self.df)
