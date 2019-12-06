@@ -60,8 +60,40 @@ class analyze:
             model.fit(Xtrain, ytrain)
             ypred = model.predict(Xtest)
             tn, fp, fn, tp = metrics.confusion_matrix(ytest, np.round(ypred)).ravel()
-            print(f"Test results for model number {i}, ")
-            print(f"TN : {tn}  FP : {fp},  FN : {fn},  TP : {tp}\n\n")
+            #print(f"Test results for model number {i}, ")
+            #print(f"TN : {tn}  FP : {fp},  FN : {fn},  TP : {tp}\n\n")
+        return tp
+
+
+    def optparamfinder(self, labels, values, Nloops):
+        """
+        labels: list of labels
+        values: list of arrays containing corresponding values
+        """
+
+        if len(self.models)!=1:
+            print("only works with one model at a time")
+            return
+        model = self.models[0]
+        optinds = np.zeros((Nloops, len(labels))).astype(int)
+        opterrs = np.zeros(Nloops)
+        for i in range(Nloops):                     #goes through Nloops loops
+            for j,arr in enumerate(values):           #goes through the different parameters
+                err_arr = np.zeros(len(arr))
+                for k,val in enumerate(arr):        #goes through the values in a parameter
+                    print(i,j,k)
+                    model.paramchanger(labels[j], val)                #update parameter
+                    #err_arr[k] = self.traintesterr(testerr = True)
+                    #evaluate kfold error with k=2,3,4,5with updated parameter:
+                    err_arr[k] = self.traintestpred("ok")
+
+                optind = np.argmax(err_arr)     #index of optimal value of the parameter
+                optinds[i,j] = optind           #store index
+                model.paramchanger(labels[j], arr[optind])    #change to optimal value
+            opterrs[i] = np.max(err_arr)        #error for the foudn optimal values this loop
+        return optinds, opterrs
+
+
 
 class XGBoost:     #may want this for general use, not yet used
     def __init__(self,num_round):
@@ -93,7 +125,7 @@ class one_dim_CNN:
                       'optimizer': 'adam',
                       'loss': 'categorical_crossentropy',
                       'metrics': [tf.keras.metrics.AUC(curve='PR'), 'FalseNegatives'],
-                      'epochs': 30,
+                      'epochs': 1,
                       'batch_size': 32,
                       'input_len': 3197
                      }
@@ -133,7 +165,7 @@ class one_dim_CNN:
 
     def paramchanger(self, label, value):
         self.param[label] = value
-        if label not in ['epochs', batch_size]:
+        if label not in ['epochs', 'batch_size']:
             self.initmodel()
 
     def expanddim_X(self,X):
@@ -155,7 +187,8 @@ class one_dim_CNN:
 
         self.model.fit(X, y,
                       epochs = self.param['epochs'],
-                      batch_size = self.param['batch_size']
+                      batch_size = self.param['batch_size'],
+                      verbose = False
                       )
 
     def predict(self, X):
@@ -163,12 +196,42 @@ class one_dim_CNN:
             X = self.expanddim_X(X)
         return self.model.predict(X)[:,0]
 
-if __name__ == "__main__":
-    from models import NNmodel
+def xgboostopter1():
+    model = XGBoost(10)
+    models = [model]
     loader = exodat()
-    model1 = one_dim_CNN()
-    model2 = NNmodel()
-    model3 = XGBoost(100)
-    models = [model3, model1, model2]
     A = analyze(models, loader)
-    A.traintestpred("ok")
+
+    labels = ['max_depth', 'eta']
+    values = [np.arange(1,5), np.array([0.5,1,1.5])]
+    Nloops = 2
+
+    return A.optparamfinder(labels, values, Nloops)
+
+def CNNopter1():
+    model = one_dim_CNN()
+    models = [model]
+    loader = exodat()
+    A = analyze(models, loader)
+
+    labels = ['CNNfilters', 'DenseLayers', 'kernel_size', 'batch_size']
+    values = [[[64], [32], [16], [8]],
+              [[2], [512,2], [256,2], [128,2], [512,64,2]],
+              [3,4,5,6],
+              np.array([8, 16,32,64])
+             ]
+    return A.optparamfinder(labels, values, 1)
+
+if __name__ == "__main__":
+    # from models import NNmodel
+    # loader = exodat()
+    # model1 = one_dim_CNN()
+    # model2 = NNmodel()
+    # model3 = XGBoost(10)
+    # models = [model3, model1, model2]
+    # A = analyze(models, loader)
+    # #A.traintestpred("ok")
+
+
+    #optinds, opterrs = xgboostopter1()
+    optinds, opterrs = CNNopter1()
