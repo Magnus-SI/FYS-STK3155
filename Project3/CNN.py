@@ -86,13 +86,14 @@ class one_dim_CNN:
         Last layer will be a regular dense layer, so the dimension should match the data
         """
         self.param = {
-                      'layers': [4,8,16,32,2],
-                      'kernel_size': 32,
-                      'activations': ['relu','relu','relu', 'relu', 'softmax'],
+                      'CNNfilters': [64],
+                      'DenseLayers' : [512,2],
+                      'kernel_size': 5,
+                      'activations': ['relu', 'softmax'],
                       'optimizer': 'adam',
                       'loss': 'categorical_crossentropy',
-                      'metrics': ['Precision', 'Recall', 'FalseNegatives'],
-                      'epochs': 10,
+                      'metrics': [tf.keras.metrics.AUC(curve='PR'), 'FalseNegatives'],
+                      'epochs': 30,
                       'batch_size': 32,
                       'input_len': 3197
                      }
@@ -101,19 +102,27 @@ class one_dim_CNN:
     def initmodel(self):
         model = tf.keras.models.Sequential()
 
-        model.add(tf.keras.layers.Conv1D(filters=self.param['layers'][0],\
+        model.add(tf.keras.layers.Conv1D(filters=self.param['CNNfilters'][0],\
                   kernel_size= self.param['kernel_size'],\
                   activation = self.param['activations'][0],\
                   input_shape=(self.param['input_len'],1)))
         model.add(tf.keras.layers.MaxPool1D())
-        for i,l in enumerate(self.param['layers'][1:-1]):
-            model.add(tf.keras.layers.Conv1D(filters=self.param['layers'][i],\
+        for fnum in self.param['CNNfilters'][1:]:
+            model.add(tf.keras.layers.Conv1D(filters=fnum,\
                       kernel_size= self.param['kernel_size'],\
-                      activation = self.param['activations'][i]))
-            model.add(tf.keras.layers.MaxPool1D())
+                      activation = self.param['activations'][0]))
+            #model.add(tf.keras.layers.Conv1D(filters=fnum,\
+            #          kernel_size= self.param['kernel_size'],\
+            #          activation = self.param['activations'][0]))
+            model.add(tf.keras.layers.MaxPool1D(pool_size=5,strides=2))
 
         model.add(tf.keras.layers.Flatten())
-        model.add(tf.keras.layers.Dense(self.param['layers'][-1],self.param['activations'][-1]))
+
+        for N in self.param['DenseLayers'][:-1]:
+            model.add(tf.keras.layers.Dense(N,self.param['activations'][0]))
+        model.add(tf.keras.layers.Dense(self.param['DenseLayers'][-1],self.param['activations'][-1]))
+
+
 
         model.compile(
             optimizer = self.param['optimizer'],
@@ -159,7 +168,7 @@ if __name__ == "__main__":
     loader = exodat()
     model1 = one_dim_CNN()
     model2 = NNmodel()
-    model3 = XGBoost(10)
+    model3 = XGBoost(100)
     models = [model3, model1, model2]
     A = analyze(models, loader)
     A.traintestpred("ok")
