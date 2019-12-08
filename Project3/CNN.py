@@ -60,9 +60,22 @@ class analyze:
             model.fit(Xtrain, ytrain)
             ypred = model.predict(Xtest)
             tn, fp, fn, tp = metrics.confusion_matrix(ytest, np.round(ypred)).ravel()
-            #print(f"Test results for model number {i}, ")
-            #print(f"TN : {tn}  FP : {fp},  FN : {fn},  TP : {tp}\n\n")
+            print(f"Test results for model number {i}, ")
+            print(f"TN : {tn}  FP : {fp},  FN : {fn},  TP : {tp}\n\n")
         return tp
+
+    def plot_PR(self):
+        """
+        Plots the PR (precision-recall) curve for the model using the train data
+        """
+        Xtest = self.dftest[self.xlabels].values
+        ytest = self.dftest[self.ylabels].values
+        for model in self.models:
+            ypred = model.predict(Xtest)
+            if len(ypred.shape)==2:
+                ypred=ypred[:,0]
+            precision, recall, thresholds = metrics.precision_recall_curve(ytest, ypred)
+            plt.plot(precision,recall)
 
 
     def optparamfinder(self, labels, values, Nloops):
@@ -125,7 +138,7 @@ class one_dim_CNN:
                       'optimizer': 'adam',
                       'loss': 'categorical_crossentropy',
                       'metrics': [tf.keras.metrics.AUC(curve='PR'), 'FalseNegatives'],
-                      'epochs': 1,
+                      'epochs': 15,
                       'batch_size': 32,
                       'input_len': 3197
                      }
@@ -187,8 +200,7 @@ class one_dim_CNN:
 
         self.model.fit(X, y,
                       epochs = self.param['epochs'],
-                      batch_size = self.param['batch_size'],
-                      verbose = False
+                      batch_size = self.param['batch_size']
                       )
 
     def predict(self, X):
@@ -222,16 +234,17 @@ def CNNopter1():
              ]
     return A.optparamfinder(labels, values, 1)
 
+
 if __name__ == "__main__":
-    # from models import NNmodel
-    # loader = exodat()
-    # model1 = one_dim_CNN()
-    # model2 = NNmodel()
-    # model3 = XGBoost(10)
-    # models = [model3, model1, model2]
-    # A = analyze(models, loader)
-    # #A.traintestpred("ok")
+    #from models import NNmodel
+    #loader = exodat()
+    #model1 = one_dim_CNN()
+    #model2 = NNmodel()
+    #model3 = XGBoost(10)
+    #models = [model3, model1, model2]
+    #A = analyze(models, loader)
+    #A.traintestpred("ok")
 
 
-    #optinds, opterrs = xgboostopter1()
+    optinds, opterrs = xgboostopter1()
     optinds, opterrs = CNNopter1()
