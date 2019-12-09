@@ -4,6 +4,30 @@ import numpy as np
 from sklearn import metrics
 import matplotlib.pyplot as plt
 import tensorflow as tf
+from sklearn.svm import LinearSVC
+from sklearn.datasets import make_classification
+from sklearn.linear_model import LogisticRegression
+
+
+class LinSVC:
+    def __init__(self):
+        self.clf = LinearSVC()
+
+    def fit(self,X,y):
+        self.clf.fit(X, y)
+
+    def predict(self,X):
+        return self.clf.predict(X)
+
+class LogReg:
+    def __init__(self):
+        self.clf = LogisticRegression()
+
+    def fit(self,X,y):
+        self.clf.fit(X, y)
+
+    def predict(self,X):
+        return self.clf.predict_proba(X)[:,1]
 
 class NNxgb:
     def __init__(self, num_round_xgb):
@@ -206,7 +230,8 @@ if __name__ == "__main__":
     model5.paramchanger('booster', 'gbtree')
     model2 = NNmodel()
     model3 = NNxgb(10)
-    models = [model1, model2, model3, model4, model5]
+    model6 = LogReg()
+    models = [model1, model2, model3, model4, model5,model6]
     A = analyze(models, loader)
     A.traintestpred("ok")
     A.plot_PR()
