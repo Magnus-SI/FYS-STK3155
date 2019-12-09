@@ -200,7 +200,9 @@ class analyze:
             model.fit(Xtrain, ytrain)
             ypred = model.predict(Xtest)
             print(ytest.shape, ypred.shape)
-            scores[i] = metrics.accuracy_score(ytest, np.round(ypred))
+            precision, recall, thresholds = metrics.precision_recall_curve(ytest, ypred)
+            scores[i] = metrics.auc(recall, precision)
+            #scores[i] = metrics.accuracy_score(ytest, np.round(ypred))
         print(scores)
 
     def plot_PR(self):
@@ -218,6 +220,34 @@ class analyze:
             plt.plot(precision,recall,label=name)
         plt.legend()
         plt.show()
+
+    def optparamfinder(self, labels, values, Nloops):
+        """
+        labels: list of labels
+        values: list of arrays containing corresponding values
+        """
+
+        if len(self.models)!=1:
+            print("only works with one model at a time")
+            return
+        model = self.models[0]
+        optinds = np.zeros((Nloops, len(labels))).astype(int)
+        opterrs = np.zeros(Nloops)
+        for i in range(Nloops):                     #goes through Nloops loops
+            for j,arr in enumerate(values):           #goes through the different parameters
+                err_arr = np.zeros(len(arr))
+                for k,val in enumerate(arr):        #goes through the values in a parameter
+                    print(i,j,k)
+                    model.paramchanger(labels[j], val)                #update parameter
+                    #err_arr[k] = self.traintesterr(testerr = True)
+                    #evaluate kfold error with k=2,3,4,5with updated parameter:
+                    err_arr[k] = self.traintestpred("ok")
+
+                optind = np.argmax(err_arr)     #index of optimal value of the parameter
+                optinds[i,j] = optind           #store index
+                model.paramchanger(labels[j], arr[optind])    #change to optimal value
+            opterrs[i] = np.max(err_arr)        #error for the foudn optimal values this loop
+        return optinds, opterrs
 
 if __name__ == "__main__":
     from pulsar import pulsardat
