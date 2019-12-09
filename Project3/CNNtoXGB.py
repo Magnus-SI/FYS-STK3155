@@ -11,6 +11,8 @@ class ay:
         models: list of models, e.g. [NN,xgboost]
         """
         self.dftrain, self.dftest, self.xlabels, self.ylabels = loader()
+        self.dftrain = self.dftrain[:1000]
+        self.dftest = self.dftest[:250]
         self.model = model
 
     def traintestpred(self, cost):
@@ -22,22 +24,32 @@ class ay:
         #return self.model.CNNoutlayer1(Xtest)
         self.model.fitxgb(Xtrain, ytrain)
 
+        ypred = self.model.predict(Xtest)
+        ypredCNN = self.model.CNNpredict(Xtest)
+        tn, fp, fn, tp = metrics.confusion_matrix(ytest, np.round(ypred)).ravel()
+        print(f"Test results for CNN")
+        print(f"TN : {tn}  FP : {fp},  FN : {fn},  TP : {tp}\n\n")
+        print("Test results for CNN->xgboost")
+        tn, fp, fn, tp = metrics.confusion_matrix(ytest, np.round(ypredCNN)).ravel()
+        print(f"TN : {tn}  FP : {fp},  FN : {fn},  TP : {tp}\n\n")
+
 class CNNxgb:
     def __init__(self, num_round_xgb):
         self.paramxgb = {'max_depth': 3,
                       'eta': 1,
                       'objective': 'binary:logistic',
-                      'nthread': 8,
-                      'eval_metric': 'auc'}
+                      'nthread': 2,
+                      'eval_metric': 'auc',
+                      'booster': 'dart'}
 
         self.paramCNN = {'CNNfilters': [64],
-                      'DenseLayers' : [512,2],
+                      'DenseLayers' : [2],
                       'kernel_size': 5,
                       'activations': ['relu', 'softmax'],
                       'optimizer': 'adam',
                       'loss': 'categorical_crossentropy',
-                      'metrics': [tf.keras.metrics.AUC(curve='PR'), 'FalseNegatives'],
-                      'epochs': 1,
+                      'metrics': [tf.keras.metrics.AUC(curve='PR'), 'FalseNegatives', 'FalsePositives'],
+                      'epochs': 20,
                       'batch_size': 32,
                       'input_len': 3197,
                       'pool_size': 5,
@@ -65,7 +77,7 @@ class CNNxgb:
             model.add(tf.keras.layers.MaxPool1D(pool_size = self.paramCNN['pool_size'],
                                                 strides = self.paramCNN['strides']))
 
-        model.add(tf.keras.layers.Flatten())
+        model.add(tf.keras.layers.Flatten(name = 'flatter'))
 
         for N in self.paramCNN['DenseLayers'][:-1]:
             model.add(tf.keras.layers.Dense(N,self.paramCNN['activations'][0]))
@@ -79,7 +91,8 @@ class CNNxgb:
         self.CNN = model
         self.interm = tf.keras.models.Model(inputs = model.input,
                                             outputs = model.get_layer('CNN1').output)
-
+        self.flatter = tf.keras.models.Model(inputs = model.input,
+                                             outputs = model.get_layer('flatter').output)
 
     def paramchanger(self, label, value, paramtype = 'xgb'):
         if paramtype == 'xgb':
@@ -141,19 +154,27 @@ class CNNxgb:
         # Xlayer = self.CNNoutlayer1(X)
         # with tf.Session() as sess:
         #     X = Xlayer.eval(feed_dict = {Xlayer:X})
-        X = self.interm.predict(X)
+        print(X.shape)
+        # X = self.interm.predict(X)
+        # print(X.shape)
+        X = self.flatter.predict(X)
         print(X.shape)
         dfit = xgb.DMatrix(X, label = y)
-        self.bst = xgb.train(self.param, dfit, self.num_round)
+        self.bst = xgb.train(self.paramxgb, dfit, self.num_round_xgb)
 
     def predict(self, X):
-        if len(y.shape)==1:
-            y = self.expanddim_y(y)
+        # if len(y.shape)==1:
+        #     y = self.expanddim_y(y)
         if len(X.shape)==2:
             X = self.expanddim_X(X)
-        #X = self.CNNoutlayer1(X)
+        X = self.flatter.predict(X)
         dpred = xgb.DMatrix(X)
         return self.bst.predict(dpred)
+
+    def CNNpredict(self,X):
+        if len(X.shape)==2:
+            X = self.expanddim_X(X)
+        return self.CNN.predict(X)
 
 if __name__ == "__main__":
     from CNN import exodat
