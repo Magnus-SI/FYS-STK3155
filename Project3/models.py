@@ -25,12 +25,12 @@ class XGBoost:     #may want this for general use, not yet used
 class NNmodel:
     def __init__(self):
         self.param = {
-                      'layers': [50,2],
+                      'layers': [128,2],
                       'activations': ['relu', 'softmax'],
                       'optimizer': 'adam',
                       'loss': 'categorical_crossentropy',
                       'metrics': ['AUC'],
-                      'epochs': 10,
+                      'epochs': 20,
                       'batch_size': 32
                      }
         self.initmodel()
@@ -102,11 +102,28 @@ class analyze:
             scores[i] = metrics.accuracy_score(ytest, np.round(ypred))
         print(scores)
 
+    def plot_PR(self):
+        """
+        Plots the PR (precision-recall) curve for the model using the train data
+        """
+        Xtest = self.dftest[self.xlabels].values
+        ytest = self.dftest[self.ylabels].values
+        for model in self.models:
+            ypred = model.predict(Xtest)
+            name = type(model).__name__
+            if len(ypred.shape)==2:
+                ypred=ypred[:,0]
+            precision, recall, thresholds = metrics.precision_recall_curve(ytest, ypred)
+            plt.plot(precision,recall,label=name)
+        plt.legend()
+        plt.show()
+
 if __name__ == "__main__":
     from pulsar import pulsardat
     loader = pulsardat()
-    model1 = xgbmodelonly(num_round = 100)
+    model1 = XGBoost(num_round = 100)
     model2 = NNmodel()
     models = [model1, model2]
     A = analyze(models, loader)
     A.traintestpred("ok")
+    A.plot_PR()
