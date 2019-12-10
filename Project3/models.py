@@ -334,13 +334,31 @@ def NNopter():
     loader = pulsardat()
     A = analyze(models, loader)
 
+    labels = ['layers',
+              'epochs',
+              'batch_size'
+             ]
+
+    values = [[[128,2], [64,2], [32,2]],
+              np.array([5,10,15,20]),
+              np.array([8,16,32,64])            #from 8,16,32,64, 64 was selected
+             ]
+
+    Nloops = 2
+    optinds, opterrs = A.optparamfinder(labels, values, Nloops)
+    print(optinds, opterrs)
+    return A.models[0]
+
 def optmodelcomp():
     loader = pulsardat()
     model1 = xgbtreeopter('dart')
     model2 = xgbtreeopter('gbtree')
     model3 = xgblinearopter()
     model4 = LogReg()
-    models = [model1, model2, model3, model4]
+    model5 = NNmodel()
+    model5.paramchanger('layers', [64,2])           #selected values from NNopter
+    model5.paramchanger('batch_size', 64)
+    models = [model1, model2, model3, model4, model5]
     A = analyze(models, loader)
     A.traintestpred('ok')
     A.plot_PR()
@@ -363,3 +381,4 @@ def multimodelcomp():
 
 if __name__ == "__main__":
     optmodelcomp()
+    #ok = NNopter()
