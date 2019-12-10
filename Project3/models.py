@@ -217,25 +217,18 @@ class analyze:
         print(scores)
         return scores[0]
 
-    def plot_PR(self):
+    def plot_PR(self,Ks):
         """
-        Plots the PR (precision-recall) curve for the model using the train data
+        Plots the PR (precision-recall) curve for all models, using the PRcurve_kfold method
+        Also saves the resulting AUC measures.
         """
-        Xtest = self.dftest[self.xlabels].values
-        ytest = self.dftest[self.ylabels].values
-
-        base_val = np.count_nonzero(ytest)/len(ytest)
-        plt.plot([0,1],[base_val,base_val], 'r--', label = "Random guessing")
-
         for model in self.models:
-            ypred = model.predict(Xtest)
             name = type(model).__name__
             if name == "XGBoost":
                 name = model.param['booster']
-            if len(ypred.shape)==2:
-                ypred=ypred[:,0]
-            precision, recall, thresholds = metrics.precision_recall_curve(ytest, ypred)
+            precision, recall, auc = self.PRcurve_kfold(Ks,model)
             plt.plot(precision,recall,label=name)
+            print(f"Model {name} gives K-fold AUC = {auc}")
         plt.legend()
         plt.show()
 
@@ -266,6 +259,55 @@ class analyze:
                 model.paramchanger(labels[j], arr[optind])    #change to optimal value
             opterrs[i] = np.max(err_arr)        #error for the foudn optimal values this loop
         return optinds, opterrs
+
+    def kfoldsplit(self,k):
+        """
+        Splits data into k equally sized sets, 1 of which will be used for testing,
+        the rest for training
+        df: dataframe of data to split
+        """
+        df = self.df
+        df = df.sample(frac=1.0)     #ensures random order of data
+        splitinds = len(df) * np.arange(1,k)/k  #indices to split at
+        splitinds = splitinds.astype(int)
+        dfsplit = np.split(df,splitinds)    #contains a list of k dataframes, with the different sets of data
+        return dfsplit
+
+    def PRcurve_kfold(self,Ks,model):
+        """
+        Returns the PR-curve using K-fold cross-validation
+        Ks is a list of all values for K to be used
+        """
+
+        precision = np.zeros(10000)
+        recall = np.linspace(0,1,10000)
+        auc = 0
+
+        for K in Ks:
+            dfsplit = self.kfoldsplit(K)
+
+            for i in range(K):
+                dftest = dfsplit[K-1-i]
+                if i==0:
+                    dftrain = pd.concat(dfsplit[:-1])
+                elif i==K:
+                    dftrain = pd.concat(dfsplit[1:])
+                else:
+                    dftrain = pd.concat(dfsplit[:K-1-i] + dfsplit[K-i:])
+                print(f"Test split {i+1} of {K}")
+                #model.initmodel()
+                model.fit(dftrain[self.xlabels].values, dftrain[self.ylabels].values)
+                target = dftest[self.ylabels].values
+                pred = model.predict(dftest[self.xlabels].values)
+
+                if len(pred.shape) == 2:
+                    pred = pred[:,0]
+                precision_vals, recall_vals, thresholds = metrics.precision_recall_curve(target, pred)
+                precision += np.interp(recall,recall_vals[::-1],precision_vals[::-1])
+                auc += metrics.auc(recall_vals, precision_vals)
+        precision /= np.sum(Ks)
+        auc /= np.sum(Ks)
+        return precision, recall, auc
 
 def xgbtreeopter(ttype = 'dart'):
     """
@@ -360,8 +402,15 @@ def optmodelcomp():
     model5.paramchanger('batch_size', 64)
     models = [model1, model2, model3, model4, model5]
     A = analyze(models, loader)
+    Ks = [3,4,5]
+
+    plt.figure()
+    A.plot_PR(Ks)
+
+    """
     A.traintestpred('ok')
     A.plot_PR()
+    """
 
 def multimodelcomp():
     loader = pulsardat()
@@ -376,9 +425,16 @@ def multimodelcomp():
     model6 = LogReg()
     models = [model1, model2, model3, model4, model5,model6]
     A = analyze(models, loader)
+    Ks = [3,4,5]
+
+    plt.figure()
+    A.plot_PR(Ks)
+
+
+    """
     A.traintestpred("ok")
     A.plot_PR()
-
+    """
 if __name__ == "__main__":
     optmodelcomp()
     #ok = NNopter()
