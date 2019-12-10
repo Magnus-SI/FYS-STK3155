@@ -189,14 +189,15 @@ class analyze:
         self.models = models
         self.df, self.xlabels, self.ylabels = loader()
         self.N = len(self.df)
-        self.traintestsimple(train_frac = 0.5)
+        self.traintestsimple(train_frac = 0.8)
 
     def traintestsplit(self, traininds, testinds):
         self.dftrain = self.df.iloc[traininds]
         self.dftest = self.df.iloc[testinds]
 
     def traintestsimple(self, train_frac):
-        inds = self.df.index
+        inds = self.df.index.values
+        np.random.shuffle(inds)
         traininds, testinds = np.split(inds, [int(train_frac*self.N)])
         self.traintestsplit(traininds, testinds)
 
@@ -325,6 +326,13 @@ def xgblinearopter():
     optinds, opterrs = A.optparamfinder(labels, values, Nloops)
     print(optinds, opterrs)
     return A.models[0]
+
+def NNopter():
+    model = NNmodel()
+    model.paramchanger('booster', 'gblinear')
+    models = [model]
+    loader = pulsardat()
+    A = analyze(models, loader)
 
 def optmodelcomp():
     loader = pulsardat()
