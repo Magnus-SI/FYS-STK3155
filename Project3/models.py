@@ -7,7 +7,8 @@ import tensorflow as tf
 from sklearn.svm import LinearSVC
 from sklearn.datasets import make_classification
 from sklearn.linear_model import LogisticRegression
-
+from pulsar import pulsardat
+from time import time
 
 class LinSVC:
     def __init__(self):
@@ -108,12 +109,21 @@ class NNxgb:
 
 class XGBoost:     #may want this for general use, not yet used
     def __init__(self,num_round):
-        self.param = {'max_depth': 3, 'eta': 1, 'objective': 'binary:logistic',
-                      'nthread': 8, 'eval_metric': 'auc', 'booster': 'dart'}
+        self.param = {'max_depth': 3,
+                      'eta': 1,
+                      'objective': 'binary:logistic',
+                      'nthread': 8,
+                      'eval_metric': 'auc',
+                      'booster': 'dart',
+                      'verbosity': 1
+                     }
         self.num_round = num_round
 
     def paramchanger(self, label, value):
-        self.param[label] = value
+        if label == 'num_round':
+            self.num_round = value
+        else:
+            self.param[label] = value
 
     def fit(self,X,y):
         dfit = xgb.DMatrix(X, label = y)
@@ -151,7 +161,7 @@ class NNmodel:
 
     def paramchanger(self, label, value):
         self.param[label] = value
-        if label not in ['epochs', batch_size]:
+        if label not in ['epochs', 'batch_size']:
             self.initmodel()
 
     def expanddim(self,y):
@@ -204,6 +214,7 @@ class analyze:
             scores[i] = metrics.auc(recall, precision)
             #scores[i] = metrics.accuracy_score(ytest, np.round(ypred))
         print(scores)
+        return scores[0]
 
     def plot_PR(self):
         """
@@ -213,11 +224,13 @@ class analyze:
         ytest = self.dftest[self.ylabels].values
 
         base_val = np.count_nonzero(ytest)/len(ytest)
-
         plt.plot([0,1],[base_val,base_val], 'r--', label = "Random guessing")
+
         for model in self.models:
             ypred = model.predict(Xtest)
             name = type(model).__name__
+            if name == "XGBoost":
+                name = model.param['booster']
             if len(ypred.shape)==2:
                 ypred=ypred[:,0]
             precision, recall, thresholds = metrics.precision_recall_curve(ytest, ypred)
@@ -253,8 +266,78 @@ class analyze:
             opterrs[i] = np.max(err_arr)        #error for the foudn optimal values this loop
         return optinds, opterrs
 
-if __name__ == "__main__":
-    from pulsar import pulsardat
+def xgbtreeopter(ttype = 'dart'):
+    """
+    ttype: dart or gbtree
+    """
+    model = XGBoost(num_round = 10)
+    model.paramchanger('booster', ttype)
+    models = [model]
+    loader = pulsardat()
+    A = analyze(models, loader)
+
+    labels = ['max_depth',
+              'eta',
+              'num_round',
+              'subsample',
+              'gamma',
+              'lambda',
+              'alpha',
+              'scale_pos_weight'
+             ]
+
+    values = [np.arange(1, 5),
+              np.array([0.25, 0.5, 0.75]),
+              np.array([3, 5, 10, 15, 30]),
+              np.array([0.5, 0.75, 1]),
+              np.array([0, 0.5, 1]),
+              np.array([1, 1.5]),
+              np.array([0, 0.5]),
+              np.array([0.1, 1, 5, 10]),
+              ]
+
+    if ttype == 'dart':
+        labels.append('rate_drop')
+        values.append(np.array([0.0, 0.1, 0.2]))
+
+    Nloops = 2
+    optinds, opterrs = A.optparamfinder(labels, values, Nloops)
+    print(optinds, opterrs)
+    return A.models[0]
+
+def xgblinearopter():
+    model = XGBoost(num_round = 10)
+    model.paramchanger('booster', 'gblinear')
+    models = [model]
+    loader = pulsardat()
+    A = analyze(models, loader)
+
+    labels = ['lambda',
+              'alpha',
+              'top_k'
+             ]
+
+    values = [np.array([0, 0.01, 0.1, 1]),
+              np.array([0, 0.01, 0.1, 1]),
+              np.array([0, 7, 6, 5])
+             ]
+    Nloops = 2
+    optinds, opterrs = A.optparamfinder(labels, values, Nloops)
+    print(optinds, opterrs)
+    return A.models[0]
+
+def optmodelcomp():
+    loader = pulsardat()
+    model1 = xgbtreeopter('dart')
+    model2 = xgbtreeopter('gbtree')
+    model3 = xgblinearopter()
+    model4 = LogReg()
+    models = [model1, model2, model3, model4]
+    A = analyze(models, loader)
+    A.traintestpred('ok')
+    A.plot_PR()
+
+def multimodelcomp():
     loader = pulsardat()
     model1 = XGBoost(num_round = 10)
     model4 = XGBoost(num_round = 10)
@@ -269,3 +352,6 @@ if __name__ == "__main__":
     A = analyze(models, loader)
     A.traintestpred("ok")
     A.plot_PR()
+
+if __name__ == "__main__":
+    optmodelcomp()
