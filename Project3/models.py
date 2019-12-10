@@ -211,6 +211,10 @@ class analyze:
         """
         Xtest = self.dftest[self.xlabels].values
         ytest = self.dftest[self.ylabels].values
+
+        base_val = np.count_nonzero(ytest)/len(ytest)
+
+        plt.plot([0,1],[base_val,base_val], 'r--', label = "Random guessing")
         for model in self.models:
             ypred = model.predict(Xtest)
             name = type(model).__name__
