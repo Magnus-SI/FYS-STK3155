@@ -228,8 +228,11 @@ class analyze:
                 name = model.param['booster']
             precision, recall, auc = self.PRcurve_kfold(Ks,model)
             plt.plot(precision,recall,label=name)
-            print(f"Model {name} gives K-fold AUC = {auc}")
+            save_results_latex("auc_results.txt",[name,auc],["%s","%.3f"])
+        plt.xlabel("Recall",fontsize=14)
+        plt.ylabel("Precision",fontsize=14)
         plt.legend()
+        plt.savefig("Auc.png")
         plt.show()
 
     def optparamfinder(self, labels, values, Nloops):
@@ -435,6 +438,23 @@ def multimodelcomp():
     A.traintestpred("ok")
     A.plot_PR()
     """
+
+def save_results_latex(filename,results,format_types):
+        """
+        Adds result to filename, stored in latex table format
+        Results should be a list of numbers.
+        format_types should be string like "%.3f" that specifies how each
+        column sould be formatted
+        """
+        file = open(filename,'a')
+        string = ''
+        for i,number in enumerate(results):
+            string += "%s&"%(format_types[i])%(number)
+        string = string[:-1]
+        string += "\\\ \n \hline \n"
+        file.write(string)
+        file.close()
+
 if __name__ == "__main__":
     optmodelcomp()
     #ok = NNopter()
