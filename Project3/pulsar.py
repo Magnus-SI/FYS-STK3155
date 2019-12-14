@@ -33,3 +33,13 @@ class pulsardat:
     def __call__(self):
         self.pre_process()
         return self.df, self.xlabels, self.ylabels
+
+
+if __name__ == '__main__':
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    data = pulsardat()
+
+    df, xl, yl = data()
+    fig = sns.pairplot(df,hue="target_class")
+    plt.savefig("pairplot.png")
