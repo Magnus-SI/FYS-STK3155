@@ -217,23 +217,28 @@ class analyze:
         print(scores)
         return scores[0]
 
-    def plot_PR(self,Ks):
+    def plot_curve(self,Ks,curve_funcs):
         """
         Plots the PR (precision-recall) curve for all models, using the PRcurve_kfold method
         Also saves the resulting AUC measures.
+        saves AUC for the curve to auc_results.txt and returns list of figures
         """
-        for model in self.models:
+        figs = [plt.figure() for func in curve_funcs]
+        for i,model in enumerate(self.models):
             name = type(model).__name__
             if name == "XGBoost":
                 name = model.param['booster']
-            precision, recall, auc = self.PRcurve_kfold(Ks,model)
-            plt.plot(precision,recall,label=name)
-            save_results_latex("auc_results.txt",[name,auc],["%s","%.3f"])
-        plt.xlabel("Recall",fontsize=14)
-        plt.ylabel("Precision",fontsize=14)
-        plt.legend()
-        plt.savefig("Auc.png")
-        plt.show()
+            x,ys,aucs = self.curve_kfold(Ks,model,curve_funcs)
+
+            save_results_latex("auc_results.txt", [name]+aucs, ["%s"] + ["%.3f"]*len(aucs))
+            for i,fig in enumerate(figs):
+                plt.figure(fig.number)
+                plt.plot(x,ys[i],label=name)
+
+        for fig in figs:
+            plt.figure(fig.number)
+            plt.legend()
+        return figs
 
     def optparamfinder(self, labels, values, Nloops):
         """
@@ -276,15 +281,17 @@ class analyze:
         dfsplit = np.split(df,splitinds)    #contains a list of k dataframes, with the different sets of data
         return dfsplit
 
-    def PRcurve_kfold(self,Ks,model):
+    def curve_kfold(self,Ks,model,curve_funcs):
         """
-        Returns the PR-curve using K-fold cross-validation
+        Returns an x array from 0 to 1, and a list for all curves from curve_funcs, including the auc from k-fold for each curve
+        curve_funcs is a list of functions taking target and prediction as argument 
+        each function should retur x, y and threshold values for the curve (x and y from 0 to 1)
         Ks is a list of all values for K to be used
         """
 
-        precision = np.zeros(10000)
-        recall = np.linspace(0,1,10000)
-        auc = 0
+        ys = [np.zeros(10000) for curve in curve_funcs]
+        x = np.linspace(0,1,10000)
+        aucs = [0 for curve in curve_funcs]
 
         for K in Ks:
             dfsplit = self.kfoldsplit(K)
@@ -305,12 +312,16 @@ class analyze:
 
                 if len(pred.shape) == 2:
                     pred = pred[:,0]
-                precision_vals, recall_vals, thresholds = metrics.precision_recall_curve(target, pred)
-                precision += np.interp(recall,recall_vals[::-1],precision_vals[::-1])
-                auc += metrics.auc(recall_vals, precision_vals)
-        precision /= np.sum(Ks)
-        auc /= np.sum(Ks)
-        return precision, recall, auc
+
+                for i,func in enumerate(curve_funcs):
+                    xvals, yvals, thresholds = func(target, pred)
+                    ys[i] += np.interp(x,xvals,yvals)
+                    aucs[i] += metrics.auc(xvals, yvals)
+
+        for i in range(len(ys)):
+            ys[i] /= np.sum(Ks)
+            aucs[i] /= np.sum(Ks)
+        return x, ys, aucs
 
 def xgbtreeopter(ttype = 'dart'):
     """
@@ -394,6 +405,14 @@ def NNopter():
     print(optinds, opterrs)
     return A.models[0]
 
+def PRcurve(target, pred):
+    """
+    Function to make the PR curve return x,y,threshold, like the ROC curve
+    """
+    precision, recall, threshold = metrics.precision_recall_curve(target,pred)
+    return recall[::-1], precision[::-1], threshold[::-1]
+
+
 def optmodelcomp():
     loader = pulsardat()
     model1 = xgbtreeopter('dart')
@@ -407,8 +426,20 @@ def optmodelcomp():
     A = analyze(models, loader)
     Ks = [3,4,5]
 
-    plt.figure()
-    A.plot_PR(Ks)
+    funcs = [PRcurve,metrics.roc_curve]
+    figs = A.plot_curve(Ks,funcs)
+
+    plt.figure(figs[0].number)
+    plt.xlabel("Recall",fontsize=14)
+    plt.ylabel("Precision",fontsize=14)
+    plt.savefig("Auc_PR.png")
+
+    plt.figure(figs[1].number)
+    plt.xlabel("False positive ratio",fontsize=14)
+    plt.ylabel("True positive ratio",fontsize=14)
+    plt.savefig("Auc_ROC.png")
+    
+    plt.show()
 
     """
     A.traintestpred('ok')
