@@ -168,8 +168,9 @@ class NNmodel:
 
     def paramchanger(self, label, value):
         self.param[label] = value
-        if label not in ['epochs', 'batch_size']:
-            self.initmodel()
+        # if label not in ['epochs', 'batch_size']:
+        #     self.initmodel()
+        self.initmodel()
 
     def expanddim(self,y):
         ynew = np.zeros((len(y), 2))
@@ -217,11 +218,11 @@ class analyze:
         for i, model in enumerate(self.models):
             model.fit(Xtrain, ytrain)
             ypred = model.predict(Xtest)
-            print(ytest.shape, ypred.shape)
+            #print(ytest.shape, ypred.shape)
             precision, recall, thresholds = metrics.precision_recall_curve(ytest, ypred)
             scores[i] = metrics.auc(recall, precision)
             #scores[i] = metrics.accuracy_score(ytest, np.round(ypred))
-        print(scores)
+        #print(scores)
         return scores[0]
 
     def plot_curve(self,Ks,curve_funcs):
@@ -267,13 +268,31 @@ class analyze:
                     model.paramchanger(labels[j], val)                #update parameter
                     #err_arr[k] = self.traintesterr(testerr = True)
                     #evaluate kfold error with k=2,3,4,5with updated parameter:
-                    err_arr[k] = self.traintestpred("ok")
+                    #err_arr[k] = self.traintestpred("ok")
+                    err_arr[k] = self.traintestkfold(np.arange(3,6))
 
                 optind = np.argmax(err_arr)     #index of optimal value of the parameter
                 optinds[i,j] = optind           #store index
                 model.paramchanger(labels[j], arr[optind])    #change to optimal value
             opterrs[i] = np.max(err_arr)        #error for the foudn optimal values this loop
         return optinds, opterrs
+
+    def traintestkfold(self,ks):
+        err = 0
+        c = 0
+        for k in ks:
+            dfsplit = self.kfoldsplit(k)
+            for i in range(k):
+                c+=1
+                self.dftest = dfsplit[k-1-i]
+                if i==0:
+                    self.dftrain = pd.concat(dfsplit[:-1])
+                elif i==k:
+                    self.dftrain = pd.concat(dfsplit[1:])
+                else:
+                    self.dftrain = pd.concat(dfsplit[:k-1-i] + dfsplit[k-i:])
+                err += self.traintestpred("ok")
+        return err/c
 
     def kfoldsplit(self,k):
         """
