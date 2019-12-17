@@ -112,7 +112,7 @@ class XGBoost:     #may want this for general use, not yet used
         self.param = {'max_depth': 3,
                       'eta': 1,
                       'objective': 'binary:logistic',
-                      'n_jobs': 8,
+                      'nthread': 8,
                       'eval_metric': 'auc',
                       'booster': 'dart',
                       'verbosity': 1
@@ -458,23 +458,29 @@ def optmodelcomp():
     plt.figure(figs[0].number)
     plt.xlabel("Recall",fontsize=14)
     plt.ylabel("Precision",fontsize=14)
+    plt.grid()
     plt.savefig("Auc_PR.png")
 
     plt.figure(figs[1].number)
     plt.xlabel("False positive ratio",fontsize=14)
     plt.ylabel("True positive ratio",fontsize=14)
+    plt.grid()
     plt.savefig("Auc_ROC.png")
 
     plt.figure()
     A.models[1].model.fit(A.df[A.xlabels].values, A.df[A.ylabels].values)
     xgb.plot_tree(A.models[1].model)
+    fig = plt.gcf()
+    fig.set_size_inches(150, 100)
     plt.savefig("tree_plot.pdf")
 
     plt.figure()
 
     importances = A.models[1].feature_importances()
     plt.bar(np.arange(len(A.xlabels)),importances)
-    plt.savefig("tree_plot.png")
+    plt.ylabel("Importance", fontsize = 14)
+    plt.xlabel("Predictor number", fontsize = 14)
+    plt.savefig("importance.png")
     plt.show()
 
     """
