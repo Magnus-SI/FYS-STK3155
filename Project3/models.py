@@ -35,7 +35,7 @@ class NNxgb:
         self.paramxgb = {'max_depth': 3,
                       'eta': 1,
                       'objective': 'binary:logistic',
-                      'nthread': 4,
+                      'nthread': 8,
                       'eval_metric': 'auc',
                       'booster': 'dart'}
 
@@ -75,8 +75,8 @@ class NNxgb:
             self.paramxgb[label] = value
         else:
             self.paramCNN[label] = value
-            if label not in ['epochs', 'batch_size']:
-                self.initmodel()
+            #if label not in ['epochs', 'batch_size']:
+            self.initNN()
 
     def expanddim(self,y):
         ynew = np.zeros((len(y), 2))
@@ -90,7 +90,7 @@ class NNxgb:
         self.NN.fit(X, y,
                       epochs = self.paramNN['epochs'],
                       batch_size = self.paramNN['batch_size'],
-                      verbose = True
+                      verbose = False
                       )
 
     def fitxgb(self, X, y):
@@ -183,7 +183,8 @@ class NNmodel:
             y = self.expanddim(y)
         self.model.fit(X, y,
                       epochs = self.param['epochs'],
-                      batch_size = self.param['batch_size']
+                      batch_size = self.param['batch_size'],
+                      verbose = False
                       )
 
     def predict(self, X):
@@ -209,6 +210,16 @@ class analyze:
         traininds, testinds = np.split(inds, [int(train_frac*self.N)])
         self.traintestsplit(traininds, testinds)
 
+    def traintestresample(self, train_frac, K = 5):
+        self.dftrains = [None]*K
+        self.dftests = [None]*K
+        inds = self.df.index.values
+        for k in range(K):
+            np.random.shuffle(inds)
+            traininds, testinds = np.split(inds, [int(train_frac*self.N)])
+            self.dftrains[k] = self.df.iloc[traininds]
+            self.dftests[k] = self.df.iloc[testinds]
+
     def traintestpred(self, cost):
         Xtrain = self.dftrain[self.xlabels].values
         ytrain = self.dftrain[self.ylabels].values
@@ -219,8 +230,8 @@ class analyze:
             model.fit(Xtrain, ytrain)
             ypred = model.predict(Xtest)
             #print(ytest.shape, ypred.shape)
-            precision, recall, thresholds = metrics.precision_recall_curve(ytest, ypred)
-            scores[i] = metrics.auc(recall, precision)
+            precision, recall, thresholds = PRcurve(ytest, ypred)#metrics.precision_recall_curve(ytest, ypred)
+            scores[i] = metrics.auc(precision, recall)
             #scores[i] = metrics.accuracy_score(ytest, np.round(ypred))
         #print(scores)
         return scores[0]
@@ -248,7 +259,7 @@ class analyze:
             plt.legend()
         return figs
 
-    def optparamfinder(self, labels, values, Nloops):
+    def optparamfinder(self, labels, values, Nloops, split = 'kfold'):
         """
         labels: list of labels
         values: list of arrays containing corresponding values
@@ -269,7 +280,15 @@ class analyze:
                     #err_arr[k] = self.traintesterr(testerr = True)
                     #evaluate kfold error with k=2,3,4,5with updated parameter:
                     #err_arr[k] = self.traintestpred("ok")
-                    err_arr[k] = self.traintestkfold(np.arange(3,6))
+                    if split == 'kfold':
+                        err_arr[k] = self.traintestkfold(np.arange(3,6))
+                    else:
+                        err = 0
+                        for dftrain,dftest in zip(self.dftrains, self.dftests):
+                            self.dftrain = dftrain
+                            self.dftest = dftest
+                            err += self.traintestpred("ok")
+                        err_arr[k] = err/len(self.dftrains)
 
                 optind = np.argmax(err_arr)     #index of optimal value of the parameter
                 optinds[i,j] = optind           #store index
@@ -349,7 +368,7 @@ class analyze:
             aucs[i] /= np.sum(Ks)
         return x, ys, aucs
 
-def xgbtreeopter(ttype = 'dart'):
+def xgbtreeopter(ttype = 'dart', split = 'kfold'):
     """
     ttype: dart or gbtree
     """
@@ -358,6 +377,10 @@ def xgbtreeopter(ttype = 'dart'):
     models = [model]
     loader = pulsardat()
     A = analyze(models, loader)
+    if split == 'kfold':
+        pass
+    else:
+        A.traintestresample(train_frac = split, K = 25)
 
     labels = ['max_depth',
               'eta',
@@ -370,23 +393,34 @@ def xgbtreeopter(ttype = 'dart'):
              ]
 
     values = [np.arange(1, 5),
-              np.array([0.25, 0.5, 0.75]),
-              np.array([3, 5, 10, 15, 30]),
-              np.array([0.5, 0.75, 1]),
-              np.array([0, 0.5, 1]),
-              np.array([1, 1.5]),
-              np.array([0, 0.5]),
-              np.array([0.1, 1, 5, 10]),
+              np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]),
+              np.array([3, 5, 10, 15, 30, 50]),
+              np.array([0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.975, 1.0]),
+              np.array([0, 0.25, 0.5, 0.75, 1]),
+              np.array([1, 1.25, 1.5, 1.75, 2]),
+              np.array([0, 0.25, 0.5, 0.75, 1]),
+              np.array([0.1, 0.5, 1, 2, 3, 5, 8]),
               ]
 
     if ttype == 'dart':
         labels.append('rate_drop')
-        values.append(np.array([0.0, 0.1, 0.2]))
+        values.append(np.array([0.0, 0.01, 0.02, 0.05, 0.1, 0.2]))
 
-    Nloops = 2
-    optinds, opterrs = A.optparamfinder(labels, values, Nloops)
-    print(optinds, opterrs)
-    return A.models[0]
+    Nloops = 5
+    optinds, opterrs = A.optparamfinder(labels, values, Nloops, split)
+    if split == 'kfold':
+        return A.models[0]
+    else:
+        optloop = np.argmax(opterrs)
+        print(optinds, opterrs)
+        inds = optinds[optloop]
+        results = np.zeros(len(inds)+2)
+        for i in range(len(inds)):
+            results[i+1] = values[i][inds[i]]
+        results[0] = split
+        results[-1] = opterrs[optloop]
+        save_results_latex('%s.txt'%ttype,results,format_types=['%s']+["%g"]*len(inds)+['%.3f'])
+    #return A.models[0]
 
 def xgblinearopter():
     model = XGBoost(num_round = 10)
@@ -409,27 +443,46 @@ def xgblinearopter():
     print(optinds, opterrs)
     return A.models[0]
 
-def NNopter():
+def NNopter(split = 'kfold'):
     model = NNmodel()
-    model.paramchanger('booster', 'gblinear')
+    #model.paramchanger('booster', 'gblinear')
     models = [model]
     loader = pulsardat()
     A = analyze(models, loader)
+
+    if split == 'kfold':
+        pass
+    else:
+        A.traintestresample(train_frac = split, K = 5)
 
     labels = ['layers',
               'epochs',
               'batch_size'
              ]
 
-    values = [[[128,2], [64,2], [32,2]],
+    values = [[[128,2], [64,2], [32,2], [16,2], [8,2]],
               np.array([5,10,15,20]),
-              np.array([8,16,32,64])            #from 8,16,32,64, 64 was selected
+              np.array([32,64,128,256])            #from 8,16,32,64, 64 was selected
              ]
 
-    Nloops = 2
-    optinds, opterrs = A.optparamfinder(labels, values, Nloops)
+    Nloops = 3
+    optinds, opterrs = A.optparamfinder(labels, values, Nloops, split)
     print(optinds, opterrs)
-    return A.models[0]
+    if split == 'kfold':
+        return A.models[0]
+    else:
+        optloop = np.argmax(opterrs)
+        print(optinds, opterrs)
+        inds = optinds[optloop]
+        results = np.zeros(len(inds)+2)
+        for i in range(len(inds)):
+            if i!=0:
+                results[i+1] = values[i][inds[i]]
+            else:
+                results[i+1] = values[i][inds[i]][0]
+        results[0] = split
+        results[-1] = opterrs[optloop]
+        save_results_latex('NN.txt',results,format_types=['%s']+["%g"]*len(inds)+['%.3f'])
 
 def PRcurve(target, pred):
     """
@@ -467,6 +520,7 @@ def optmodelcomp():
     plt.grid()
     plt.savefig("Auc_ROC.png")
 
+
     plt.figure()
     A.models[1].model.fit(A.df[A.xlabels].values, A.df[A.ylabels].values)
     xgb.plot_tree(A.models[1].model)
@@ -481,12 +535,24 @@ def optmodelcomp():
     plt.ylabel("Importance", fontsize = 14)
     plt.xlabel("Predictor number", fontsize = 14)
     plt.savefig("importance.png")
+
     plt.show()
 
     """
     A.traintestpred('ok')
     A.plot_PR()
     """
+
+def trainfraccompdart():
+    fracs = np.array([0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 0.6, 0.7, 0.8])
+    for frac in fracs:
+        xgbtreeopter('dart', split =frac)
+
+def trainfraccompNN():
+    fracs = np.array([0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 0.6, 0.7, 0.8])
+    for frac in fracs:
+        print("newfrac: ", frac)
+        NNopter(split =frac)
 
 def multimodelcomp():
     loader = pulsardat()
@@ -504,8 +570,21 @@ def multimodelcomp():
     Ks = [3,4,5]
 
     plt.figure()
-    A.plot_PR(Ks)
+    funcs = [PRcurve,metrics.roc_curve]
+    A.plot_curve(Ks, funcs)
+    figs = A.plot_curve(Ks,funcs)
 
+    plt.figure(figs[0].number)
+    plt.xlabel("Recall",fontsize=14)
+    plt.ylabel("Precision",fontsize=14)
+    #plt.savefig("Auc_PR.png")
+
+    plt.figure(figs[1].number)
+    plt.xlabel("False positive ratio",fontsize=14)
+    plt.ylabel("True positive ratio",fontsize=14)
+    #plt.savefig("Auc_ROC.png")
+
+    plt.show()
 
     """
     A.traintestpred("ok")
@@ -530,4 +609,8 @@ def save_results_latex(filename,results,format_types):
 
 if __name__ == "__main__":
     optmodelcomp()
+    #trainfraccompdart()
+    #trainfraccompNN()
+    #ok = xgbtreeopter()
+    #multimodelcomp()
     #ok = NNopter()
