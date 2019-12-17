@@ -112,7 +112,7 @@ class XGBoost:     #may want this for general use, not yet used
         self.param = {'max_depth': 3,
                       'eta': 1,
                       'objective': 'binary:logistic',
-                      'nthread': 8,
+                      'n_jobs': 8,
                       'eval_metric': 'auc',
                       'booster': 'dart',
                       'verbosity': 1
@@ -127,11 +127,18 @@ class XGBoost:     #may want this for general use, not yet used
 
     def fit(self,X,y):
         dfit = xgb.DMatrix(X, label = y)
+        self.model = xgb.XGBClassifier(**self.param)
         self.bst = xgb.train(self.param, dfit, self.num_round)
 
     def predict(self, X):
         dpred = xgb.DMatrix(X)
         return self.bst.predict(dpred)
+
+    def feature_importances(self):
+        """
+        Returns the feature importances as in the feature_importances_ method for XGBs sklearn interface
+        """
+        return self.model.feature_importances_
 
 class NNmodel:
     def __init__(self):
@@ -284,7 +291,7 @@ class analyze:
     def curve_kfold(self,Ks,model,curve_funcs):
         """
         Returns an x array from 0 to 1, and a list for all curves from curve_funcs, including the auc from k-fold for each curve
-        curve_funcs is a list of functions taking target and prediction as argument 
+        curve_funcs is a list of functions taking target and prediction as argument
         each function should retur x, y and threshold values for the curve (x and y from 0 to 1)
         Ks is a list of all values for K to be used
         """
@@ -438,7 +445,17 @@ def optmodelcomp():
     plt.xlabel("False positive ratio",fontsize=14)
     plt.ylabel("True positive ratio",fontsize=14)
     plt.savefig("Auc_ROC.png")
-    
+
+    plt.figure()
+    A.models[1].model.fit(A.df[A.xlabels].values, A.df[A.ylabels].values)
+    xgb.plot_tree(A.models[1].model)
+    plt.savefig("tree_plot.pdf")
+
+    plt.figure()
+
+    importances = A.models[1].feature_importances()
+    plt.bar(np.arange(len(A.xlabels)),importances)
+    plt.savefig("tree_plot.png")
     plt.show()
 
     """
