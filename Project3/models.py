@@ -236,7 +236,7 @@ class analyze:
         #print(scores)
         return scores[0]
 
-    def plot_curve(self,Ks,curve_funcs):
+    def analyze_kfold(self,Ks,curve_funcs):
         """
         Plots the PR (precision-recall) curve for all models, using the PRcurve_kfold method
         Also saves the resulting AUC measures.
@@ -326,47 +326,71 @@ class analyze:
         dfsplit = np.split(df,splitinds)    #contains a list of k dataframes, with the different sets of data
         return dfsplit
 
-    def curve_kfold(self,Ks,model,curve_funcs):
+    def kfold_analysis(self,Ks,curve_funcs):
         """
-        Returns an x array from 0 to 1, and a list for all curves from curve_funcs, including the auc from k-fold for each curve
+        Returns a list of figure for all curves plotted
         curve_funcs is a list of functions taking target and prediction as argument
         each function should retur x, y and threshold values for the curve (x and y from 0 to 1)
         Ks is a list of all values for K to be used
+        Stores k-fold AUC for all curves, as well as tpr,precision and fpr to the file 'results.txt'
         """
 
-        ys = [np.zeros(10000) for curve in curve_funcs]
-        x = np.linspace(0,1,10000)
-        aucs = [0 for curve in curve_funcs]
+        
+        figs = [plt.figure() for func in curve_funcs]
 
-        for K in Ks:
-            dfsplit = self.kfoldsplit(K)
+        for n,model in enumerate(self.models):
+            ys = [np.zeros(10000) for curve in curve_funcs]
+            x = np.linspace(0,1,10000)
+            aucs = [0 for curve in curve_funcs]
+            name = type(model).__name__
+            tpr = 0; prec = 0; fpr = 0;
 
-            for i in range(K):
-                dftest = dfsplit[K-1-i]
-                if i==0:
-                    dftrain = pd.concat(dfsplit[:-1])
-                elif i==K:
-                    dftrain = pd.concat(dfsplit[1:])
-                else:
-                    dftrain = pd.concat(dfsplit[:K-1-i] + dfsplit[K-i:])
-                print(f"Test split {i+1} of {K}")
-                #model.initmodel()
-                model.fit(dftrain[self.xlabels].values, dftrain[self.ylabels].values)
-                target = dftest[self.ylabels].values
-                pred = model.predict(dftest[self.xlabels].values)
+            if name == "XGBoost":
+                name = model.param['booster']
+            for K in Ks:
+                dfsplit = self.kfoldsplit(K)
 
-                if len(pred.shape) == 2:
-                    pred = pred[:,0]
+                for i in range(K):
+                    dftest = dfsplit[K-1-i]
+                    if i==0:
+                        dftrain = pd.concat(dfsplit[:-1])
+                    elif i==K:
+                        dftrain = pd.concat(dfsplit[1:])
+                    else:
+                        dftrain = pd.concat(dfsplit[:K-1-i] + dfsplit[K-i:])
+                    print(f"Test split {i+1} of {K}")
 
-                for i,func in enumerate(curve_funcs):
-                    xvals, yvals, thresholds = func(target, pred)
-                    ys[i] += np.interp(x,xvals,yvals)
-                    aucs[i] += metrics.auc(xvals, yvals)
+                    #model.initmodel()
+                    model.fit(dftrain[self.xlabels].values, dftrain[self.ylabels].values)
+                    target = dftest[self.ylabels].values
+                    pred = model.predict(dftest[self.xlabels].values)
 
-        for i in range(len(ys)):
-            ys[i] /= np.sum(Ks)
-            aucs[i] /= np.sum(Ks)
-        return x, ys, aucs
+                    if len(pred.shape) == 2:
+                        pred = pred[:,0]
+
+                    for i,func in enumerate(curve_funcs):
+                        xvals, yvals, thresholds = func(target, pred)
+                        ys[i] += np.interp(x,xvals,yvals)
+                        aucs[i] += metrics.auc(xvals, yvals)
+
+                    tn, fp, fn, tp = metrics.confusion_matrix(target, np.round(pred)).ravel()
+
+                    tpr += tp/(tp + fn)
+                    prec += tp/(tp + fp)
+                    fpr += fp/(fp+tn)
+
+            for i in range(len(ys)):
+                ys[i] /= np.sum(Ks)
+                aucs[i] /= np.sum(Ks)
+            tpr /= np.sum(Ks)
+            prec /= np.sum(Ks)
+            fpr /= np.sum(Ks)
+
+            save_results_latex("results.txt", [name]+aucs+[tpr,prec,fpr], ["%s"] + ["%.3f"]*(len(aucs)+3))
+            for i,fig in enumerate(figs):
+                plt.figure(fig.number)
+                plt.plot(x,ys[i],label=name)
+        return figs
 
 def xgbtreeopter(ttype = 'dart', split = 'kfold'):
     """
@@ -506,7 +530,7 @@ def optmodelcomp():
     Ks = [3,4,5]
 
     funcs = [PRcurve,metrics.roc_curve]
-    figs = A.plot_curve(Ks,funcs)
+    figs = A.kfold_analysis(Ks,funcs)
 
     plt.figure(figs[0].number)
     plt.xlabel("Recall",fontsize=14)
