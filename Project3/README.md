@@ -10,3 +10,5 @@
   Loads and performs preprocessing on the pulsar data. Note that this requires the file pulsar_stars.csv in the Project3 subfolder to run. This file can be found on kaggle https://www.kaggle.com/pavanraj159/predicting-a-pulsar-star.
 
 The Folder AdditionalFigures contains additional figures that did not make it to the report.
+
+**CNN.py** and **CNNtoXGB.py** are partially finished programs we ended up not using.
