@@ -32,6 +32,9 @@ class LogReg:
 
 class NNxgb:
     def __init__(self, num_round_xgb):
+        """
+        Combination of a FFNN and XGB
+        """
         self.paramxgb = {'max_depth': 3,
                       'eta': 1,
                       'objective': 'binary:logistic',
@@ -52,6 +55,9 @@ class NNxgb:
         self.initNN()
 
     def initNN(self):
+        """
+        Initialize the NN
+        """
         model = tf.keras.models.Sequential()
         model.add(tf.keras.layers.Dense(128, activation = 'relu',
                                         input_shape = (8,), name = 'layer1'))
@@ -71,20 +77,34 @@ class NNxgb:
                                             outputs = model.get_layer('layer1').output)
 
     def paramchanger(self, label, value, paramtype = 'xgb'):
+        """
+        Changes parameters
+        label: label of parameter as found in the param dictionaries
+        value: value to change to
+        paramtype: change xgb parameter or NN parameter
+        """
         if paramtype == 'xgb':
             self.paramxgb[label] = value
         else:
-            self.paramCNN[label] = value
+            self.paramNN[label] = value
             #if label not in ['epochs', 'batch_size']:
             self.initNN()
 
     def expanddim(self,y):
+        """
+        Dimensions must be expanded for NN
+        """
         ynew = np.zeros((len(y), 2))
         ynew[:, 0] = y
         ynew[:, 1] = 1-y
         return ynew
 
     def fitNN(self, X, y):
+        """
+        Fits the Neural network to the data
+        X: design matrix
+        y: target class
+        """
         if len(y.shape)==1:
             y = self.expanddim(y)
         self.NN.fit(X, y,
@@ -94,15 +114,24 @@ class NNxgb:
                       )
 
     def fitxgb(self, X, y):
+        """
+        Uses xgb to fit the data after it has passed through the first
+        hidden layer of the NN
+        """
         X = self.interm.predict(X)
         dfit = xgb.DMatrix(X, label = y)
         self.bst = xgb.train(self.paramxgb, dfit, self.num_round_xgb)
 
     def fit(self, X,y):
+        """
+        Fits the NN, and then fits the xgb based on the NN fit.
+        """
         self.fitNN(X,y)
         self.fitxgb(X,y)
 
     def predict(self, X):
+        """
+        """
         X = self.interm.predict(X)
         dpred = xgb.DMatrix(X)
         return self.bst.predict(dpred)
@@ -120,6 +149,12 @@ class XGBoost:     #may want this for general use, not yet used
         self.num_round = num_round
 
     def paramchanger(self, label, value):
+        """
+        Changes parameters in the self.param dictionary
+        label: label of param to change
+        value: value to change to
+        """
+
         if label == 'num_round':
             self.num_round = value
         else:
@@ -154,6 +189,9 @@ class NNmodel:
         self.initmodel()
 
     def initmodel(self):
+        """
+        Initializes the NN based on parameters currently in the self.param dictionary
+        """
         model = tf.keras.models.Sequential([
                 tf.keras.layers.Dense(int(i), activation = j)\
                 for i,j in zip(self.param['layers'], self.param['activations'])
@@ -167,12 +205,21 @@ class NNmodel:
         self.model = model
 
     def paramchanger(self, label, value):
+        """
+        Changes parameters in the self.param dictionary
+        label: label of param to change
+        value: value to change to
+        """
+
         self.param[label] = value
         # if label not in ['epochs', 'batch_size']:
         #     self.initmodel()
         self.initmodel()
 
     def expanddim(self,y):
+        """
+        Expands 1d target class to 2d binary class.
+        """
         ynew = np.zeros((len(y), 2))
         ynew[:, 0] = y
         ynew[:, 1] = 1-y
@@ -194,6 +241,7 @@ class analyze:
     def __init__(self, models, loader):
         """
         models: list of models, e.g. [NN,xgboost]
+        loader: initialized class or function that returns dataframe and labels of x and y
         """
         self.models = models
         self.df, self.xlabels, self.ylabels = loader()
@@ -201,16 +249,28 @@ class analyze:
         self.traintestsimple(train_frac = 0.8)
 
     def traintestsplit(self, traininds, testinds):
+        """
+        Generates dftrain and dftest arrays based on indices traininds and testinds
+        """
         self.dftrain = self.df.iloc[traininds]
         self.dftest = self.df.iloc[testinds]
 
     def traintestsimple(self, train_frac):
+        """
+        Performs a simple train test split with the given fraction of training data
+        """
         inds = self.df.index.values
         np.random.shuffle(inds)
         traininds, testinds = np.split(inds, [int(train_frac*self.N)])
         self.traintestsplit(traininds, testinds)
 
     def traintestresample(self, train_frac, K = 5):
+        """
+        Performs K train-test splits with a train_frac training data.
+        Used for resampling in the hyperparameter optimization.
+        The training and test data are set as lists self.dftrains
+        and self.dftests containing K dataframes.
+        """
         self.dftrains = [None]*K
         self.dftests = [None]*K
         inds = self.df.index.values
@@ -220,7 +280,16 @@ class analyze:
             self.dftrains[k] = self.df.iloc[traininds]
             self.dftests[k] = self.df.iloc[testinds]
 
-    def traintestpred(self, cost):
+    def traintestpred(self, cost, printscores = False):
+        """
+        Fits models in self.models on the current training data in self.dftrain,
+        and evaluates their performance on current test data in self.dftest.
+
+        cost: currently unused, as the area under the precision recdall curve
+        is always used as the cost to determine the model performances
+        printscores: True if all scores should be printed, typically False during
+        hyperparameter otpimization.
+        """
         Xtrain = self.dftrain[self.xlabels].values
         ytrain = self.dftrain[self.ylabels].values
         Xtest = self.dftest[self.xlabels].values
@@ -233,8 +302,9 @@ class analyze:
             precision, recall, thresholds = PRcurve(ytest, ypred)#metrics.precision_recall_curve(ytest, ypred)
             scores[i] = metrics.auc(precision, recall)
             #scores[i] = metrics.accuracy_score(ytest, np.round(ypred))
-        #print(scores)
-        return scores[0]
+        if printscores:
+            print(scores)
+        return scores[0]    #score returned for hyperparmeter optimization.
 
     def analyze_kfold(self,Ks,curve_funcs):
         """
@@ -261,8 +331,15 @@ class analyze:
 
     def optparamfinder(self, labels, values, Nloops, split = 'kfold'):
         """
+        Finds the optimal parameters in a given search space, using a method
+        described further in the report.
+
         labels: list of labels
         values: list of arrays containing corresponding values
+        Nloops: loop over the process Nloops times
+        split: kfold performs a kfoldsplit, otherwise split is a fraction of
+               training data to use in the train-test split, where a resampling
+               of the self.dftrains and self.dftests dataframes are performed.
         """
 
         if len(self.models)!=1:
@@ -297,6 +374,9 @@ class analyze:
         return optinds, opterrs
 
     def traintestkfold(self,ks):
+        """
+        Evalutes k-fold error for values ks of k.
+        """
         err = 0
         c = 0
         for k in ks:
@@ -335,7 +415,7 @@ class analyze:
         Stores k-fold AUC for all curves, as well as tpr,precision and fpr to the file 'results.txt'
         """
 
-        
+
         figs = [plt.figure() for func in curve_funcs]
 
         for n,model in enumerate(self.models):
@@ -394,7 +474,9 @@ class analyze:
 
 def xgbtreeopter(ttype = 'dart', split = 'kfold'):
     """
+    Optimizes some set of hyperparameters for tree based xgb models.
     ttype: dart or gbtree
+    split: kfold or float fraction of training data.
     """
     model = XGBoost(num_round = 10)
     model.paramchanger('booster', ttype)
@@ -404,7 +486,8 @@ def xgbtreeopter(ttype = 'dart', split = 'kfold'):
     if split == 'kfold':
         pass
     else:
-        A.traintestresample(train_frac = split, K = 25)
+        resamps = 25        #resamples
+        A.traintestresample(train_frac = split, K = resamps)
 
     labels = ['max_depth',
               'eta',
@@ -434,7 +517,7 @@ def xgbtreeopter(ttype = 'dart', split = 'kfold'):
     optinds, opterrs = A.optparamfinder(labels, values, Nloops, split)
     if split == 'kfold':
         return A.models[0]
-    else:
+    else:       #creates table as seen in the report
         optloop = np.argmax(opterrs)
         print(optinds, opterrs)
         inds = optinds[optloop]
@@ -447,6 +530,9 @@ def xgbtreeopter(ttype = 'dart', split = 'kfold'):
     #return A.models[0]
 
 def xgblinearopter():
+    """
+    Optimizes some set of hyperparameters for the linear xgb model
+    """
     model = XGBoost(num_round = 10)
     model.paramchanger('booster', 'gblinear')
     models = [model]
@@ -468,6 +554,10 @@ def xgblinearopter():
     return A.models[0]
 
 def NNopter(split = 'kfold'):
+    """
+    Optimizes a set of hyperparameters for the NN model
+    spit: either kfold or a fraction of training data
+    """
     model = NNmodel()
     #model.paramchanger('booster', 'gblinear')
     models = [model]
@@ -477,7 +567,8 @@ def NNopter(split = 'kfold'):
     if split == 'kfold':
         pass
     else:
-        A.traintestresample(train_frac = split, K = 5)
+        resamps = 5     #resamples
+        A.traintestresample(train_frac = split, K = resamps)
 
     labels = ['layers',
               'epochs',
@@ -517,6 +608,14 @@ def PRcurve(target, pred):
 
 
 def optmodelcomp():
+    """
+    Compares performanceo of optimal models, including ROC and PR curves,
+    as well as area under curves. Also plots an example decision tree from
+    tree based xgb models, along with importance of the features.
+
+    The optimization of the xgb models are performed in this function, while
+    the NN model is previously optimized and the LogReg model has no hyperparameters.
+    """
     loader = pulsardat()
     model1 = xgbtreeopter('dart')
     model2 = xgbtreeopter('gbtree')
@@ -536,12 +635,14 @@ def optmodelcomp():
     plt.xlabel("Recall",fontsize=14)
     plt.ylabel("Precision",fontsize=14)
     plt.grid()
+    plt.legend()
     plt.savefig("Auc_PR.png")
 
     plt.figure(figs[1].number)
     plt.xlabel("False positive ratio",fontsize=14)
     plt.ylabel("True positive ratio",fontsize=14)
     plt.grid()
+    plt.legend()
     plt.savefig("Auc_ROC.png")
 
 
@@ -568,52 +669,22 @@ def optmodelcomp():
     """
 
 def trainfraccompdart():
+    """
+    Produces the table of the impact of training data size on hyperparameters for DART as seen in the report
+    """
     fracs = np.array([0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 0.6, 0.7, 0.8])
     for frac in fracs:
         xgbtreeopter('dart', split =frac)
 
 def trainfraccompNN():
+    """
+    Produces the table of the impact of training data size on hyperparameters for NN, that can
+    be found under additional figures on the github page.
+    """
     fracs = np.array([0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 0.6, 0.7, 0.8])
     for frac in fracs:
         print("newfrac: ", frac)
         NNopter(split =frac)
-
-def multimodelcomp():
-    loader = pulsardat()
-    model1 = XGBoost(num_round = 10)
-    model4 = XGBoost(num_round = 10)
-    #model4.paramchanger('objective', 'reg:squarederror')
-    model4.paramchanger('booster', 'gblinear')
-    model5 = XGBoost(num_round = 10)
-    model5.paramchanger('booster', 'gbtree')
-    model2 = NNmodel()
-    model3 = NNxgb(10)
-    model6 = LogReg()
-    models = [model1, model2, model3, model4, model5,model6]
-    A = analyze(models, loader)
-    Ks = [3,4,5]
-
-    plt.figure()
-    funcs = [PRcurve,metrics.roc_curve]
-    A.plot_curve(Ks, funcs)
-    figs = A.plot_curve(Ks,funcs)
-
-    plt.figure(figs[0].number)
-    plt.xlabel("Recall",fontsize=14)
-    plt.ylabel("Precision",fontsize=14)
-    #plt.savefig("Auc_PR.png")
-
-    plt.figure(figs[1].number)
-    plt.xlabel("False positive ratio",fontsize=14)
-    plt.ylabel("True positive ratio",fontsize=14)
-    #plt.savefig("Auc_ROC.png")
-
-    plt.show()
-
-    """
-    A.traintestpred("ok")
-    A.plot_PR()
-    """
 
 def save_results_latex(filename,results,format_types):
         """
@@ -632,9 +703,4 @@ def save_results_latex(filename,results,format_types):
         file.close()
 
 if __name__ == "__main__":
-    optmodelcomp()
-    #trainfraccompdart()
-    #trainfraccompNN()
-    #ok = xgbtreeopter()
-    #multimodelcomp()
-    #ok = NNopter()
+    pass
