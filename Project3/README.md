@@ -11,4 +11,4 @@
 
 The Folder AdditionalFigures contains additional figures that did not make it to the report.
 
-**CNN.py** and **CNNtoXGB.py** are partially finished programs we ended up not using.
+**CNN.py** and **CNNtoXGB.py** are partially finished programs we didn't use as they would be relevant for other datasets than the pulsar data we ended up choosing for our report.
