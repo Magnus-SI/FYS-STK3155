@@ -7,4 +7,7 @@ to fit two datasets. First we look at the mathematical Franke's function, and af
 we use a data set with real life height data.
 
 ## Project 2
-This readme will be updated when the report and codes in this project are finalized before the extended deadline on wednesday 13.11
+See Project 2 folder
+
+## Project 3
+See Project 3 folder
